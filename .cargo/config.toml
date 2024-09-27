@@ -1,2 +1,0 @@
-[alias]
-run-benchmark = "run -- --url https://memo.d.foundation/playground/01_literature/building-llm-system/evaluation-guideline-for-llm-application/ --requests 10000 --concurrency 5"
