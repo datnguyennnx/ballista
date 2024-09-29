@@ -7,6 +7,7 @@ use serde_json::Value;
 use rand::seq::SliceRandom;
 use colored::*;
 use std::sync::atomic::{AtomicBool, Ordering};
+use futures::stream::{self, StreamExt};
 
 fn status_color(status: u16) -> ColoredString {
     match status {
@@ -17,28 +18,53 @@ fn status_color(status: u16) -> ColoredString {
     }
 }
 
-pub async fn send_request(client: &Client, url: &str, metrics: &Arc<Mutex<Metrics>>) {
+async fn send_request(client: &Client, url: &str, metrics: &Arc<Mutex<Metrics>>) {
     let start = Instant::now();
-    match client.get(url).send().await {
+    let result = client.get(url).send().await;
+
+    let (duration, status, json) = match result {
         Ok(response) => {
-            let duration = start.elapsed();
             let status = response.status().as_u16();
             let json = response.json::<Value>().await.ok();
-            
-            let mut metrics = metrics.lock().await;
-            metrics.update(duration, status, json);
-            
-            // Print progress for each request with colored status
-            println!("Request to: {} - Status: {}, Duration: {:?}", url, status_color(status), duration);
+            (start.elapsed(), status, json)
         }
-        Err(_) => {
-            let mut metrics = metrics.lock().await;
-            metrics.update(start.elapsed(), 0, None);
-            
-            // Print progress for failed request
-            println!("{}", "Request failed".red());
-        }
+        Err(_) => (start.elapsed(), 0, None),
+    };
+
+    metrics.lock().await.update(duration, status, json);
+
+    match status {
+        0 => println!("{}", "Request failed".red()),
+        _ => println!("Request to: {} - Status: {}, Duration: {:?}", url, status_color(status), duration),
     }
+}
+
+async fn perform_test<F>(
+    urls: Arc<Vec<String>>,
+    concurrency: u32,
+    metrics: Arc<Mutex<Metrics>>,
+    is_finished: Arc<AtomicBool>,
+    should_continue: F,
+) where
+    F: Fn() -> bool + Send + Sync + 'static,
+{
+    let client = Arc::new(Client::new());
+
+    stream::iter(std::iter::repeat_with(|| ()))
+        .take_while(move |_| futures::future::ready(should_continue()))
+        .for_each_concurrent(concurrency as usize, |_| {
+            let client = Arc::clone(&client);
+            let urls = Arc::clone(&urls);
+            let metrics = Arc::clone(&metrics);
+            async move {
+                let url = urls.choose(&mut rand::thread_rng()).unwrap();
+                send_request(&client, url, &metrics).await;
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await;
+
+    is_finished.store(true, Ordering::SeqCst);
 }
 
 pub async fn load_test(
@@ -48,36 +74,12 @@ pub async fn load_test(
     metrics: Arc<Mutex<Metrics>>,
     is_finished: Arc<AtomicBool>,
 ) {
-    let client = Client::new();
+    let request_count = Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let should_continue = move || {
+        request_count.fetch_add(1, Ordering::SeqCst) < total_requests
+    };
 
-    let mut tasks = Vec::new();
-    for _ in 0..total_requests {
-        let client = client.clone();
-        let urls = Arc::clone(&urls);
-        let metrics = Arc::clone(&metrics);
-
-        let task = tokio::task::spawn(async move {
-            let url = urls.as_slice().choose(&mut rand::thread_rng()).unwrap();
-            send_request(&client, url, &metrics).await;
-        });
-        tasks.push(task);
-
-        if tasks.len() as u32 == concurrency {
-            for task in tasks.drain(..) {
-                task.await.unwrap();
-            }
-        }
-
-        // Add a small delay to prevent overwhelming the system
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-
-    // Wait for any remaining tasks
-    for task in tasks {
-        task.await.unwrap();
-    }
-
-    is_finished.store(true, Ordering::SeqCst);
+    perform_test(urls, concurrency, metrics, is_finished, should_continue).await;
 }
 
 pub async fn stress_test(
@@ -87,36 +89,8 @@ pub async fn stress_test(
     metrics: Arc<Mutex<Metrics>>,
     is_finished: Arc<AtomicBool>,
 ) {
-    let client = Client::new();
     let end_time = Instant::now() + std::time::Duration::from_secs(duration);
+    let should_continue = move || Instant::now() < end_time;
 
-    let mut tasks = Vec::new();
-
-    while Instant::now() < end_time {
-        let client = client.clone();
-        let urls = Arc::clone(&urls);
-        let metrics = Arc::clone(&metrics);
-
-        let task = tokio::task::spawn(async move {
-            let url = urls.as_slice().choose(&mut rand::thread_rng()).unwrap();
-            send_request(&client, url, &metrics).await;
-        });
-        tasks.push(task);
-
-        if tasks.len() as u32 == concurrency {
-            for task in tasks.drain(..) {
-                task.await.unwrap();
-            }
-        }
-
-        // Add a small delay to prevent overwhelming the system
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-
-    // Wait for any remaining tasks
-    for task in tasks {
-        task.await.unwrap();
-    }
-
-    is_finished.store(true, Ordering::SeqCst);
+    perform_test(urls, concurrency, metrics, is_finished, should_continue).await;
 }

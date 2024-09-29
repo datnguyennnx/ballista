@@ -1,59 +1,61 @@
 use std::process::Command;
-use std::io::{self};
+use std::io::{self, Error, ErrorKind};
 use std::fs::File;
 use xml::reader::{EventReader, XmlEvent};
 
-pub fn get_cpu_usage() -> Result<f64, io::Error> {
-    let output = Command::new("sh")
+/// Get the current CPU usage as a percentage
+pub fn get_cpu_usage() -> io::Result<f64> {
+    Command::new("sh")
         .arg("-c")
         .arg("top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'")
-        .output()?;
-    
-    String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .parse()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .output()
+        .and_then(|output| {
+            String::from_utf8(output.stdout)
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))
+                .and_then(|s| s.trim().parse::<f64>().map_err(|e| Error::new(ErrorKind::InvalidData, e)))
+        })
 }
 
-pub fn get_memory_usage() -> Result<f64, io::Error> {
-    let output = Command::new("sh")
+/// Get the current memory usage as a percentage
+pub fn get_memory_usage() -> io::Result<f64> {
+    Command::new("sh")
         .arg("-c")
         .arg("free | grep Mem | awk '{print $3/$2 * 100.0}'")
-        .output()?;
-    
-    String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .parse()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .output()
+        .and_then(|output| {
+            String::from_utf8(output.stdout)
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))
+                .and_then(|s| s.trim().parse::<f64>().map_err(|e| Error::new(ErrorKind::InvalidData, e)))
+        })
 }
 
+/// Parse a sitemap XML file and extract URLs
 pub fn parse_sitemap(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let file = File::open(path)?;
     let parser = EventReader::new(file);
-    let mut urls = Vec::new();
     let url_tags = ["loc", "url", "link"];
-    let mut current_tag = String::new();
 
-    for event in parser {
-        match event {
-            Ok(XmlEvent::StartElement { name, .. }) => {
-                current_tag = name.local_name;
+    parser.into_iter()
+        .filter_map(|e| e.ok())
+        .filter_map(|e| match e {
+            XmlEvent::Characters(content) if content.starts_with("http") => Some(content),
+            _ => None,
+        })
+        .collect::<Vec<String>>()
+        .into_iter()
+        .filter(|url| url_tags.iter().any(|&tag| url.contains(tag)))
+        .collect::<Vec<String>>()
+        .into_iter()
+        .filter(|url| !url.is_empty())
+        .map(|url| Ok(url))
+        .collect::<Result<Vec<String>, Box<dyn std::error::Error>>>()
+        .and_then(|urls| {
+            if urls.is_empty() {
+                Err("No valid URLs found in the XML file".into())
+            } else {
+                Ok(urls)
             }
-            Ok(XmlEvent::Characters(content)) if url_tags.contains(&current_tag.as_str()) => {
-                if content.starts_with("http") {
-                    urls.push(content);
-                }
-            }
-            Err(e) => return Err(Box::new(e)),
-            _ => {}
-        }
-    }
-
-    if urls.is_empty() {
-        return Err("No valid URLs found in the XML file".into());
-    }
-
-    Ok(urls)
+        })
 }
 
 #[cfg(test)]
