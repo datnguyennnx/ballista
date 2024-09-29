@@ -1,117 +1,96 @@
-# Load Testing CLI Tool
+# Target CLI - Load Testing Tool
 
-This is a command-line interface (CLI) tool for load testing web applications. It allows you to send multiple concurrent requests to a specified URL or a list of URLs from a sitemap, and provides detailed metrics about the performance of the target application.
+Target CLI is a command-line load testing tool written in Rust. It allows you to perform load tests and stress tests on web applications, providing detailed performance metrics and resource usage statistics.
 
 ## Features
 
--   Send a specified number of requests to a single URL or multiple URLs from a sitemap
--   Adjust concurrency level to simulate multiple users
--   Stress testing mode with a specified duration
--   Display "send package to url" message for each request
--   Support for both sitemap XML and generic XML with children
--   Detailed metrics including:
-    -   Total requests sent
-    -   Successful and failed requests
-    -   Average response time
-    -   95th percentile response time
-    -   HTTP status code distribution
-    -   CPU and memory usage during the test
--   Real-time updates for each request
-
-## Prerequisites
-
--   Rust programming language (https://www.rust-lang.org/tools/install)
--   Cargo (Rust's package manager, typically installed with Rust)
-
-## Installation
-
-1. Clone this repository:
-
-    ```
-    git clone https://github.com/yourusername/target-cli.git
-    cd target-cli
-    ```
-
-2. Build the project:
-
-    ```
-    cargo build --release
-    ```
-
-3. The built binary will be located at `target/release/target`. To use it from any location, you need to add it to your PATH. You can do this by:
-
-    - Moving the binary to a directory that's already in your PATH (e.g., `/usr/local/bin` on Unix-like systems)
-    - Or, adding the `target/release` directory to your PATH
-
-    For example, on Unix-like systems, you can add the following line to your `.bashrc` or `.zshrc`:
-
-    ```
-    export PATH=$PATH:/path/to/target-cli/target/release
-    ```
-
-    Remember to replace `/path/to/target-cli` with the actual path where you cloned the repository.
+-   Load testing with a specified number of requests
+-   Stress testing for a specified duration
+-   Concurrent request handling
+-   Support for testing single URLs or multiple URLs from a sitemap
+-   Real-time progress tracking
+-   Detailed performance metrics
+-   Resource usage monitoring (CPU and Memory)
+-   Standalone resource usage collection
+-   Color-coded output for better readability
 
 ## Usage
 
-The basic syntax for running the load testing tool is:
-
 ```
-target [OPTIONS]
+target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH>
 ```
 
-### Options:
+### Options
 
--   `--url <URL>`: The target URL to load test
--   `--sitemap <SITEMAP_URL>`: URL or path to a sitemap file (alternative to --url)
--   `--requests <NUMBER>`: Number of requests to send (default: 100)
--   `--concurrency <NUMBER>`: Number of concurrent requests (default: 10)
--   `--stress`: Enable stress testing mode
--   `--duration <SECONDS>`: Duration for stress testing in seconds (default: 60)
+-   `--url <URL>`: URL to test
+-   `--sitemap <SITEMAP_PATH>`: Path to sitemap XML file
+-   `-r, --requests <REQUESTS>`: Number of requests to send (default: 100)
+-   `-c, --concurrency <CONCURRENCY>`: Number of concurrent requests (default: 10)
+-   `-s, --stress`: Enable stress test mode
+-   `-d, --duration <DURATION>`: Duration of the stress test in seconds (default: 60)
+-   `--resource-usage`: Collect and display resource usage data for 60 seconds
 
-### Examples:
+## Example Output
 
-1. Test a single URL with 1000 requests and 10 concurrent users:
+### Load Test
 
-    ```
-    target --url https://example.com --requests 1000 --concurrency 10
-    ```
+```
+Load Test
+==================================================
+URLs to test: 1
+Concurrency: 10
+Total requests: 100
+==================================================
 
-2. Test URLs from a sitemap with 500 requests and 5 concurrent users:
+[2023-05-01 15:30:00] https://example.com - 200 - 152.45ms
+[2023-05-01 15:30:00] https://example.com - 200 - 148.32ms
+...
 
-    ```
-    target --sitemap ./<your files name>.xml --requests 500 --concurrency 5
-    ```
+Test Results
+==================================================
+Total requests: 100
+Successful requests: 98
+Failed requests: 2
+Total time: 15.23s
+Requests per second: 6.56
+Average response time: 152.34ms
+Minimum response time: 148.32ms
+Maximum response time: 523.67ms
+Median response time: 151.89ms
+95th percentile response time: 201.45ms
 
-3. Run a stress test on a URL for 2 minutes with 20 concurrent users:
+HTTP Status Codes
+==================================================
+200: 98
+404: 2
 
-    ```
-    target --url https://example.com --stress --duration 120 --concurrency 20
-    ```
+Resource Usage
+==================================================
+Average CPU Usage: 23.45%
+Max CPU Usage: 35.67%
+Average Memory Usage: 1.23%
+Max Memory Usage: 1.45%
+```
 
-4. Run a load test using cargo:
+### Resource Usage Collection
 
-    ```
-    cargo run -- --url https://example.com --requests 100 --concurrency 10
-    ```
+```
+$ target --resource-usage
 
-5. Run a stress test using cargo:
-    ```
-    cargo run -- --url https://example.com --stress --duration 60 --concurrency 10
-    ```
+Collecting resource usage data for 60 seconds...
 
-## Output
+Resource Usage
+Average CPU Usage: 25.55% - 60 (number used)
+Max CPU Usage: 28.33% - 60 (number used)
+Average Memory Usage: 39.00% - 60 (number used)
+Max Memory Usage: 40.01% - 60 (number used)
+```
 
-The tool provides real-time updates for each request. After the test is complete, it displays a summary of results including:
+## Building and Running
 
--   Total requests sent
--   Number of successful and failed requests
--   Total test duration
--   Requests per second
--   Average response time
--   95th percentile response time
--   HTTP status code distribution
--   Average CPU and memory usage during the test
--   Sample JSON responses (if applicable)
+1. Clone the repository
+2. Run `cargo build --release`
+3. The binary will be available in `target/release/target`
 
 ## Contributing
 
@@ -119,4 +98,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.

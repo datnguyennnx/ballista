@@ -27,15 +27,29 @@ pub struct Args {
     /// Duration of the stress test in seconds (only used if --stress is set)
     #[arg(short, long, default_value_t = 60)]
     pub duration: u64,
+
+    /// Collect and display resource usage data for 60 seconds
+    #[arg(long)]
+    pub resource_usage: bool,
 }
 
 impl Args {
     /// Validate the arguments to ensure either URL or sitemap is provided
     pub fn validate(&self) -> Result<(), String> {
+        if self.resource_usage {
+            return Ok(());
+        }
         match (&self.url, &self.sitemap) {
             (None, None) => Err("Either --url or --sitemap must be provided".to_string()),
             (Some(_), Some(_)) => Err("Only one of --url or --sitemap should be provided".to_string()),
-            _ => Ok(()),
+            (Some(url), None) => {
+                if url.starts_with("http://") || url.starts_with("https://") {
+                    Ok(())
+                } else {
+                    Err("URL must start with http:// or https://".to_string())
+                }
+            },
+            (None, Some(_)) => Ok(()),
         }
     }
 }

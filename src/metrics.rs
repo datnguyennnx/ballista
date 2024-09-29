@@ -7,8 +7,6 @@ use tokio::sync::Mutex;
 #[derive(Clone, Default)]
 pub struct Metrics {
     total_requests: u32,
-    successful_requests: u32,
-    failed_requests: u32,
     total_time: Duration,
     response_times: Vec<Duration>,
     json_responses: Vec<Value>,
@@ -26,12 +24,6 @@ impl Metrics {
         self.response_times.push(duration);
 
         *self.status_codes.entry(status).or_insert(0) += 1;
-
-        if (200..300).contains(&status) {
-            self.successful_requests += 1;
-        } else {
-            self.failed_requests += 1;
-        }
 
         if let Some(json) = json {
             self.json_responses.push(json);
@@ -73,8 +65,6 @@ impl Metrics {
     pub fn summary(&self) -> MetricsSummary {
         MetricsSummary {
             total_requests: self.total_requests,
-            successful_requests: self.successful_requests,
-            failed_requests: self.failed_requests,
             total_time: self.total_time,
             min_duration: self.min_duration(),
             max_duration: self.max_duration(),
@@ -87,8 +77,6 @@ impl Metrics {
 
 pub struct MetricsSummary {
     pub total_requests: u32,
-    pub successful_requests: u32,
-    pub failed_requests: u32,
     pub total_time: Duration,
     pub min_duration: Option<Duration>,
     pub max_duration: Option<Duration>,
