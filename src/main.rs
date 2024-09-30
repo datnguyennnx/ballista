@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::time::Instant;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::Mutex;
+use std::path::Path;
 
 mod args;
 mod metrics;
@@ -20,10 +21,16 @@ use structure_output::print_test_results;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Validate arguments
-    if let Err(err) = args.validate() {
-        return Err(err.into());
-    }
+    // Check if config file is provided
+    let args = if let Some(config_path) = &args.config {
+        Args::from_json(Path::new(config_path))?
+    } else {
+        // Validate command-line arguments
+        if let Err(err) = args.validate() {
+            return Err(err.into());
+        }
+        args
+    };
 
     let urls = if let Some(sitemap_path) = &args.sitemap {
         parse_sitemap(sitemap_path)?

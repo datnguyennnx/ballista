@@ -1,7 +1,9 @@
 use clap::Parser;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
 
-/// Command-line arguments for the load testing tool
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     /// URL to test. Either this or --sitemap must be provided
@@ -31,6 +33,10 @@ pub struct Args {
     /// Collect and display resource usage data for 60 seconds
     #[arg(long)]
     pub resource_usage: bool,
+
+    /// Path to JSON configuration file
+    #[arg(long)]
+    pub config: Option<String>,
 }
 
 impl Args {
@@ -51,5 +57,17 @@ impl Args {
             },
             (None, Some(_)) => Ok(()),
         }
+    }
+
+    /// Parse JSON configuration file and return Args
+    pub fn from_json(path: &Path) -> Result<Self, String> {
+        let config_str = fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read config file: {}", e))?;
+        
+        let args: Args = serde_json::from_str(&config_str)
+            .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+        
+        args.validate()?;
+        Ok(args)
     }
 }

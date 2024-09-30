@@ -55,10 +55,11 @@ target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH>
 -   `-s, --stress`: Enable stress test mode
 -   `-d, --duration <DURATION>`: Duration of the stress test in seconds (default: 60, only used if --stress is set)
 -   `--resource-usage`: Collect and display resource usage data for 60 seconds
+-   `--config <CONFIG_PATH>`: Path to JSON configuration file
 
-## Example Usage
+### Example Usage
 
-### Load Test
+#### Load Test
 
 ```
 target --url https://example.com --requests 1000 --concurrency 20
@@ -66,7 +67,7 @@ target --url https://example.com --requests 1000 --concurrency 20
 
 This command will perform a load test on https://example.com with 1000 total requests and 20 concurrent requests.
 
-### Stress Test
+#### Stress Test
 
 ```
 target --url https://example.com --stress --duration 300 --concurrency 50
@@ -74,7 +75,7 @@ target --url https://example.com --stress --duration 300 --concurrency 50
 
 This command will perform a stress test on https://example.com for 300 seconds (5 minutes) with 50 concurrent requests.
 
-### Testing with Sitemap
+#### Testing with Sitemap
 
 ```
 target --sitemap path/to/sitemap.xml --requests 500 --concurrency 10
@@ -82,13 +83,34 @@ target --sitemap path/to/sitemap.xml --requests 500 --concurrency 10
 
 This command will perform a load test using URLs from the specified sitemap, with 500 total requests and 10 concurrent requests.
 
-### Resource Usage Collection
+#### Resource Usage Collection
 
 ```
 target --resource-usage
 ```
 
 This command will collect and display resource usage data for 60 seconds without performing any load testing.
+
+#### JSON Configuration
+
+You can also specify a JSON configuration file:
+
+```
+target --config path/to/config.json
+```
+
+An example of a JSON configuration file:
+
+```json
+{
+    "url": "https://example.com",
+    "requests": 1000,
+    "concurrency": 20,
+    "stress": false,
+    "duration": 60,
+    "resource_usage": true
+}
+```
 
 ## Output
 

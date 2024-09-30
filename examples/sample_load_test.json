@@ -1,0 +1,8 @@
+{
+    "url": "https://example.com",
+    "requests": 1000,
+    "concurrency": 20,
+    "stress": false,
+    "duration": 60,
+    "resource_usage": false
+}
