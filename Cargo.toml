@@ -1,7 +1,7 @@
 [package]
 name = "target-cli"
-version = "1.0.0"
-edition = "2021"
+version = "0.0.1"
+edition = "2024"
 description = "A command-line load testing tool"
 authors = ["Dat Nguyen <official.nguyendat@example.com>"]
 
