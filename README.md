@@ -1,18 +1,44 @@
-# Target CLI - Load Testing Tool
+# Target CLI - Advanced Load Testing Tool
 
-Target CLI is a command-line load testing tool written in Rust. It allows you to perform load tests and stress tests on web applications, providing detailed performance metrics and resource usage statistics.
+Target CLI is a command-line load testing tool written in Rust. It allows you to perform both load tests and stress tests on web applications, providing detailed performance metrics and resource usage statistics. This tool is designed to help developers and system administrators evaluate the performance and scalability of their web applications under various load conditions.
 
 ## Features
 
--   Load testing with a specified number of requests
--   Stress testing for a specified duration
--   Concurrent request handling
--   Support for testing single URLs or multiple URLs from a sitemap
--   Real-time progress tracking
--   Detailed performance metrics
--   Resource usage monitoring (CPU and Memory)
--   Standalone resource usage collection
--   Color-coded output for better readability
+-   **Flexible Testing Modes**:
+    -   Load testing with a specified number of requests
+    -   Stress testing for a specified duration
+-   **Concurrent Request Handling**: Simulate multiple users accessing the application simultaneously
+-   **Multiple URL Support**: Test single URLs or multiple URLs from a sitemap
+-   **Real-time Progress Tracking**: Monitor the test progress with a dynamic progress bar
+-   **Detailed Performance Metrics**:
+    -   Request counts and rates
+    -   Response time statistics (min, max, median, 95th percentile)
+    -   HTTP status code distribution
+-   **Resource Usage**:
+    -   CPU usage (average and maximum)
+    -   Memory usage (average and maximum)
+    -   Network usage (received and sent)
+-   **Standalone Resource Usage Collection**: Collect system resource usage data independently of load testing
+-   **Color-coded Output**: Improve readability with color-coded status codes and formatted tables
+
+## Installation
+
+To install Target CLI, you need to have Rust and Cargo installed on your system. Then, follow these steps:
+
+1. Clone the repository:
+
+    ```
+    git clone https://github.com/yourusername/target-cli.git
+    cd target-cli
+    ```
+
+2. Build the project:
+
+    ```
+    cargo build --release
+    ```
+
+3. The binary will be available at `target/release/target`
 
 ## Usage
 
@@ -23,79 +49,111 @@ target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH>
 ### Options
 
 -   `--url <URL>`: URL to test
--   `--sitemap <SITEMAP_PATH>`: Path to sitemap XML file
--   `-r, --requests <REQUESTS>`: Number of requests to send (default: 100)
+-   `--sitemap <SITEMAP_PATH>`: Path to sitemap
+-   `-r, --requests <REQUESTS>`: Number of requests to send (default: 100, ignored if --stress is set)
 -   `-c, --concurrency <CONCURRENCY>`: Number of concurrent requests (default: 10)
 -   `-s, --stress`: Enable stress test mode
--   `-d, --duration <DURATION>`: Duration of the stress test in seconds (default: 60)
+-   `-d, --duration <DURATION>`: Duration of the stress test in seconds (default: 60, only used if --stress is set)
 -   `--resource-usage`: Collect and display resource usage data for 60 seconds
 
-## Example Output
+## Example Usage
 
 ### Load Test
 
 ```
-Load Test
-==================================================
-URLs to test: 1
-Concurrency: 10
-Total requests: 100
-==================================================
-
-[2023-05-01 15:30:00] https://example.com - 200 - 152.45ms
-[2023-05-01 15:30:00] https://example.com - 200 - 148.32ms
-...
-
-Test Results
-==================================================
-Total requests: 100
-Successful requests: 98
-Failed requests: 2
-Total time: 15.23s
-Requests per second: 6.56
-Average response time: 152.34ms
-Minimum response time: 148.32ms
-Maximum response time: 523.67ms
-Median response time: 151.89ms
-95th percentile response time: 201.45ms
-
-HTTP Status Codes
-==================================================
-200: 98
-404: 2
-
-Resource Usage
-==================================================
-Average CPU Usage: 23.45%
-Max CPU Usage: 35.67%
-Average Memory Usage: 1.23%
-Max Memory Usage: 1.45%
+target --url https://example.com --requests 1000 --concurrency 20
 ```
+
+This command will perform a load test on https://example.com with 1000 total requests and 20 concurrent requests.
+
+### Stress Test
+
+```
+target --url https://example.com --stress --duration 300 --concurrency 50
+```
+
+This command will perform a stress test on https://example.com for 300 seconds (5 minutes) with 50 concurrent requests.
+
+### Testing with Sitemap
+
+```
+target --sitemap path/to/sitemap.xml --requests 500 --concurrency 10
+```
+
+This command will perform a load test using URLs from the specified sitemap, with 500 total requests and 10 concurrent requests.
 
 ### Resource Usage Collection
 
 ```
-$ target --resource-usage
-
-Collecting resource usage data for 60 seconds...
-
-Resource Usage
-Average CPU Usage: 25.55% - 60 (number used)
-Max CPU Usage: 28.33% - 60 (number used)
-Average Memory Usage: 39.00% - 60 (number used)
-Max Memory Usage: 40.01% - 60 (number used)
+target --resource-usage
 ```
 
-## Building and Running
+This command will collect and display resource usage data for 60 seconds without performing any load testing.
 
-1. Clone the repository
-2. Run `cargo build --release`
-3. The binary will be available in `target/release/target`
+## Output
+
+The tool provides detailed output including test configuration summary, real-time progress bar, comprehensive test results table, HTTP status code distribution, and resource usage statistics. Here's an example of what the output might look like:
+
+```
+Test Results
++------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
+| Total requests   | Total time | Requests per second    | Average response time  | Minimum response time  | Maximum response time  | Median response time  | 95th percentile response time  |
++------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
+| 1000             | 15.23s     | 65.66                  | 152.34ms               | 148.32ms               | 523.67ms               | 151.89ms               | 201.45ms                       |
++------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
+
+HTTP Status Codes
++-------------+-------+
+| Status Code | Count |
++-------------+-------+
+| 200         | 985   |
+| 404         | 10    |
+| 500         | 5     |
++-------------+-------+
+
+Resource Usage
++------------------+------------------------+------------------------+------------------------+
+| Metric           | Average                | Maximum                | Total                  |
++------------------+------------------------+------------------------+------------------------+
+| CPU Usage        | 23.45% (1.88 cores)    | 35.67% (2.85 cores)    | N/A                    |
+| Memory Usage     | 1.23% (0.20 GB)        | 1.45% (0.23 GB)        | N/A                    |
+| Network Received | 5.67 MB/s              | 8.90 MB/s              | 86.45 MB               |
+| Network Sent     | 1.23 MB/s              | 2.45 MB/s              | 18.76 MB               |
++------------------+------------------------+------------------------+------------------------+
+```
+
+This output provides a comprehensive overview of the test results, including performance metrics and resource usage statistics. The HTTP status codes are color-coded in the actual output (green for 2xx, yellow for 3xx, red for 4xx and 5xx) to improve readability.
+
+## Implementation Details
+
+Target CLI is implemented in Rust and utilizes several key components:
+
+-   `args.rs`: Defines and validates command-line arguments using the `clap` crate
+-   `http_client.rs`: Handles HTTP requests and manages the load/stress testing logic
+-   `metrics.rs`: Collects and calculates performance metrics
+-   `structure_output.rs`: Formats and displays test results using colored output and tables
+-   `utils.rs`: Provides utility functions for parsing sitemaps and collecting system resource usage
+-   `main.rs`: Orchestrates the overall flow of the application
+
+The tool uses asynchronous programming with `tokio` for efficient concurrent request handling and `reqwest` for HTTP client functionality. It also leverages `sysinfo` for system resource monitoring and `prettytable-rs` for formatted output.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions to Target CLI are welcome! Please feel free to submit issues, fork the repository and send pull requests!
+
+To contribute:
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a pull request
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+-   The Rust community for providing excellent crates and documentation
+-   All contributors who have helped to improve this tool
