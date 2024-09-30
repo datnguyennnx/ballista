@@ -1,4 +1,4 @@
-# Target CLI - Advanced Load Testing Tool
+# Target CLI - Advanced Load Testing Tool (v0.1.0)
 
 Target CLI is a command-line load testing tool written in Rust. It allows you to perform both load tests and stress tests on web applications, providing detailed performance metrics and resource usage statistics. This tool is designed to help developers and system administrators evaluate the performance and scalability of their web applications under various load conditions.
 
@@ -14,12 +14,14 @@ Target CLI is a command-line load testing tool written in Rust. It allows you to
     -   Request counts and rates
     -   Response time statistics (min, max, median, 95th percentile)
     -   HTTP status code distribution
--   **Resource Usage**:
+-   **Resource Usage Monitoring**:
     -   CPU usage (average and maximum)
     -   Memory usage (average and maximum)
     -   Network usage (received and sent)
 -   **Standalone Resource Usage Collection**: Collect system resource usage data independently of load testing
 -   **Color-coded Output**: Improve readability with color-coded status codes and formatted tables
+-   **Human-readable Formatting**: Durations and sizes are formatted for easy reading
+-   **Improved Error Handling**: Custom error types for better error reporting and handling
 
 ## Installation
 
@@ -121,30 +123,32 @@ Test Results
 +------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
 | Total requests   | Total time | Requests per second    | Average response time  | Minimum response time  | Maximum response time  | Median response time  | 95th percentile response time  |
 +------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
-| 1000             | 15.23s     | 65.66                  | 152.34ms               | 148.32ms               | 523.67ms               | 151.89ms               | 201.45ms                       |
+| 1000             | 15s 230ms  | 65.66                  | 152ms 340µs            | 148ms 320µs            | 523ms 670µs            | 151ms 890µs            | 201ms 450µs                    |
 +------------------+------------+------------------------+------------------------+------------------------+------------------------+------------------------+--------------------------------+
 
 HTTP Status Codes
-+-------------+-------+
-| Status Code | Count |
-+-------------+-------+
-| 200         | 985   |
-| 404         | 10    |
-| 500         | 5     |
-+-------------+-------+
++-------------+-------+------------+
+| Status Code | Count | Percentage |
++-------------+-------+------------+
+| 200         | 985   | 98.50%     |
+| 404         | 10    | 1.00%      |
+| 500         | 5     | 0.50%      |
++-------------+-------+------------+
 
 Resource Usage
 +------------------+------------------------+------------------------+------------------------+
 | Metric           | Average                | Maximum                | Total                  |
 +------------------+------------------------+------------------------+------------------------+
 | CPU Usage        | 23.45% (1.88 cores)    | 35.67% (2.85 cores)    | N/A                    |
-| Memory Usage     | 1.23% (0.20 GB)        | 1.45% (0.23 GB)        | N/A                    |
+| Memory Usage     | 1.23% (196.8 MB)       | 1.45% (232.0 MB)       | N/A                    |
 | Network Received | 5.67 MB/s              | 8.90 MB/s              | 86.45 MB               |
 | Network Sent     | 1.23 MB/s              | 2.45 MB/s              | 18.76 MB               |
 +------------------+------------------------+------------------------+------------------------+
+
+Success Rate: 98.50%
 ```
 
-This output provides a comprehensive overview of the test results, including performance metrics and resource usage statistics. The HTTP status codes are color-coded in the actual output (green for 2xx, yellow for 3xx, red for 4xx and 5xx) to improve readability.
+This output provides a comprehensive overview of the test results, including performance metrics and resource usage statistics. The HTTP status codes are color-coded in the actual output (green for 2xx, yellow for 3xx, red for 4xx and 5xx) to improve readability. Durations and sizes are formatted for easy reading using the new utility functions.
 
 ## Implementation Details
 
@@ -154,10 +158,30 @@ Target CLI is implemented in Rust and utilizes several key components:
 -   `http_client.rs`: Handles HTTP requests and manages the load/stress testing logic
 -   `metrics.rs`: Collects and calculates performance metrics
 -   `structure_output.rs`: Formats and displays test results using colored output and tables
--   `utils.rs`: Provides utility functions for parsing sitemaps and collecting system resource usage
+-   `utils.rs`: Provides utility functions for parsing sitemaps, collecting system resource usage, and formatting durations and sizes
+-   `resource_monitor.rs`: Manages the collection of system resource usage data
 -   `main.rs`: Orchestrates the overall flow of the application
 
-The tool uses asynchronous programming with `tokio` for efficient concurrent request handling and `reqwest` for HTTP client functionality. It also leverages `sysinfo` for system resource monitoring and `prettytable-rs` for formatted output.
+The tool uses asynchronous programming with `tokio` for efficient concurrent request handling and `reqwest` for HTTP client functionality. It also leverages `sysinfo` for system resource monitoring, `prettytable-rs` for formatted output, and `thiserror` for improved error handling.
+
+## Dependencies
+
+Target CLI relies on the following main dependencies:
+
+-   `clap`: Command-line argument parsing
+-   `reqwest`: HTTP client for making requests
+-   `tokio`: Asynchronous runtime
+-   `serde` and `serde_json`: JSON serialization and deserialization
+-   `futures`: Asynchronous programming utilities
+-   `indicatif`: Progress bars and indicators
+-   `colored`: Colored terminal output
+-   `prettytable-rs`: Formatted table output
+-   `sysinfo`: System information and resource usage
+-   `num_cpus`: CPU information
+-   `sys-info`: Additional system information
+-   `thiserror`: Custom error type definitions
+
+For a complete list of dependencies, please refer to the `Cargo.toml` file.
 
 ## Contributing
 

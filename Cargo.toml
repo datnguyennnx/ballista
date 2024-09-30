@@ -1,6 +1,6 @@
 [package]
 name = "target-cli"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 description = "A command-line load testing tool"
 authors = ["Dat Nguyen <official.nguyendat@example.com>"]
@@ -22,4 +22,7 @@ futures = "0.3.28"
 indicatif = "0.17.8"
 chrono = "0.4.35"
 sysinfo = "0.29.0"
-prettytable-rs = "0.10.0" 
+prettytable-rs = "0.10.0"
+num_cpus = "1.16.0"
+sys-info = "0.9.1"
+thiserror = "1.0.58"

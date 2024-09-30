@@ -6,58 +6,74 @@ use crate::metrics::Metrics;
 use serde_json::Value;
 use rand::seq::SliceRandom;
 use std::sync::atomic::{AtomicBool, Ordering};
-use futures::stream::{self, StreamExt};
+use futures::{stream, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 
-async fn send_request(client: &Client, url: &str, metrics: &Arc<Mutex<Metrics>>) {
-    let start = Instant::now();
-    let result = client.get(url).send().await;
-
-    let (duration, status, json) = match result {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let json = response.json::<Value>().await.ok();
-            (start.elapsed(), status, json)
-        }
-        Err(_) => (start.elapsed(), 0, None),
-    };
-
-    metrics.lock().await.update(duration, status, json);
+#[derive(Debug)]
+pub struct RequestResult {
+    pub duration: std::time::Duration,
+    pub status: u16,
+    pub json: Option<Value>,
 }
 
-async fn perform_test<F>(
-    urls: Arc<Vec<String>>,
-    concurrency: u32,
-    total_requests: u32,
-    metrics: Arc<Mutex<Metrics>>,
-    is_finished: Arc<AtomicBool>,
-    should_continue: F,
-) where
-    F: Fn() -> bool + Send + Sync + 'static,
-{
-    let client = Arc::new(Client::new());
-    let pb = ProgressBar::new(total_requests as u64);
+#[derive(Clone)]
+pub struct TestConfig {
+    pub urls: Arc<Vec<String>>,
+    pub concurrency: u32,
+    pub total_requests: u32,
+    pub duration: Option<u64>,
+}
+
+async fn send_request(client: &Client, url: &str) -> Result<RequestResult, reqwest::Error> {
+    let start = Instant::now();
+    let response = client.get(url).send().await?;
+    let status = response.status().as_u16();
+    let json = response.json::<Value>().await.ok();
+    Ok(RequestResult {
+        duration: start.elapsed(),
+        status,
+        json,
+    })
+}
+
+fn create_progress_bar(total: u64) -> ProgressBar {
+    let pb = ProgressBar::new(total);
     pb.set_style(ProgressStyle::default_bar()
         .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
         .expect("Failed to set progress bar template")
         .progress_chars("##-"));
+    pb
+}
 
-    let request_count = Arc::new(std::sync::atomic::AtomicU32::new(0));
+async fn perform_test(
+    config: TestConfig,
+    metrics: Arc<Mutex<Metrics>>,
+    is_finished: Arc<AtomicBool>,
+) {
+    let client = Arc::new(Client::new());
+    let pb = create_progress_bar(config.total_requests as u64);
 
-    stream::iter(std::iter::repeat_with(|| ()))
-        .take_while(move |_| futures::future::ready(should_continue()))
-        .for_each_concurrent(concurrency as usize, |_| {
+    let requests = stream::iter(0..config.total_requests)
+        .map(|_| {
             let client = Arc::clone(&client);
-            let urls = Arc::clone(&urls);
-            let metrics = Arc::clone(&metrics);
-            let pb = pb.clone();
-            let request_count = Arc::clone(&request_count);
+            let urls = Arc::clone(&config.urls);
             async move {
                 let url = urls.choose(&mut rand::thread_rng()).unwrap();
-                send_request(&client, url, &metrics).await;
-                let count = request_count.fetch_add(1, Ordering::SeqCst) + 1;
-                pb.set_position(count as u64);
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                send_request(&client, url).await
+            }
+        })
+        .buffer_unordered(config.concurrency as usize);
+
+    requests
+        .for_each(|result| {
+            let metrics = Arc::clone(&metrics);
+            let pb = pb.clone();
+            async move {
+                if let Ok(req_result) = result {
+                    let mut metrics = metrics.lock().await;
+                    metrics.add_request(req_result.duration, req_result.status, req_result.json);
+                }
+                pb.inc(1);
             }
         })
         .await;
@@ -74,12 +90,13 @@ pub async fn load_test(
     is_finished: Arc<AtomicBool>,
 ) {
     println!("Starting load test with {} total requests and {} concurrent requests", total_requests, concurrency);
-    let request_count = Arc::new(std::sync::atomic::AtomicU32::new(0));
-    let should_continue = move || {
-        request_count.fetch_add(1, Ordering::SeqCst) < total_requests
+    let config = TestConfig {
+        urls,
+        concurrency,
+        total_requests,
+        duration: None,
     };
-
-    perform_test(urls, concurrency, total_requests, metrics, is_finished, should_continue).await;
+    perform_test(config, metrics, is_finished).await;
 }
 
 pub async fn stress_test(
@@ -90,10 +107,19 @@ pub async fn stress_test(
     is_finished: Arc<AtomicBool>,
 ) {
     println!("Starting stress test for {} seconds with {} concurrent requests", duration, concurrency);
+    let config = TestConfig {
+        urls,
+        concurrency,
+        total_requests: u32::MAX,
+        duration: Some(duration),
+    };
     let end_time = Instant::now() + std::time::Duration::from_secs(duration);
-    let should_continue = move || Instant::now() < end_time;
-
-    // For stress test, we'll use a large number as total_requests
-    let total_requests = u32::MAX;
-    perform_test(urls, concurrency, total_requests, metrics, is_finished, should_continue).await;
+    
+    tokio::select! {
+        _ = perform_test(config, metrics, Arc::clone(&is_finished)) => {},
+        _ = tokio::time::sleep_until(end_time) => {
+            println!("Stress test duration reached");
+            is_finished.store(true, Ordering::SeqCst);
+        }
+    }
 }

@@ -2,14 +2,23 @@ use prettytable::{Table, Row, Cell, format};
 use std::time::Duration;
 use crate::metrics::MetricsSummary;
 use colored::{Colorize, ColoredString};
+use crate::utils::{format_duration, format_size};
 
 pub fn print_test_results(
-    summary: &MetricsSummary,
-    total_duration: Duration,
+    summary: Option<&MetricsSummary>,
+    total_duration: Option<Duration>,
     cpu_samples: &[f64],
     memory_samples: &[f64],
-    network_samples: &[(f64, f64)] // Add network samples (received, sent)
+    network_samples: &[(f64, f64)]
 ) {
+    if let Some(summary) = summary {
+        print_performance_results(summary, total_duration.unwrap());
+    }
+
+    print_resource_usage(cpu_samples, memory_samples, network_samples);
+}
+
+fn print_performance_results(summary: &MetricsSummary, total_duration: Duration) {
     println!("\nTest Results");
 
     let mut table = Table::new();
@@ -26,13 +35,13 @@ pub fn print_test_results(
 
     table.add_row(Row::new(vec![
         Cell::new(&summary.total_requests.to_string()),
-        Cell::new(&format!("{:.2?}", total_duration)),
-        Cell::new(&format!("{:.2}", summary.total_requests as f64 / total_duration.as_secs_f64())),
-        Cell::new(&format!("{:.2?}", summary.total_time / summary.total_requests)),
-        Cell::new(&summary.min_duration.map_or("N/A".to_string(), |d| format!("{:.2?}", d))),
-        Cell::new(&summary.max_duration.map_or("N/A".to_string(), |d| format!("{:.2?}", d))),
-        Cell::new(&summary.median_duration.map_or("N/A".to_string(), |d| format!("{:.2?}", d))),
-        Cell::new(&summary.percentile_95.map_or("N/A".to_string(), |d| format!("{:.2?}", d)))
+        Cell::new(&format_duration(total_duration)),
+        Cell::new(&format!("{:.2}", summary.requests_per_second())),
+        Cell::new(&format_duration(summary.average_duration().unwrap_or_default())),
+        Cell::new(&summary.min_duration.map_or("N/A".to_string(), format_duration)),
+        Cell::new(&summary.max_duration.map_or("N/A".to_string(), format_duration)),
+        Cell::new(&summary.median_duration.map_or("N/A".to_string(), format_duration)),
+        Cell::new(&summary.percentile_95.map_or("N/A".to_string(), format_duration))
     ]));
 
     table.printstd();
@@ -42,16 +51,23 @@ pub fn print_test_results(
     status_table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     status_table.set_titles(Row::new(vec![
         Cell::new("Status Code").style_spec("b"),
-        Cell::new("Count").style_spec("b")
+        Cell::new("Count").style_spec("b"),
+        Cell::new("Percentage").style_spec("b")
     ]));
     for (status, count) in &summary.status_codes {
+        let percentage = (*count as f64 / summary.total_requests as f64) * 100.0;
         status_table.add_row(Row::new(vec![
             Cell::new(&status_color(*status).to_string()).style_spec("r"),
-            Cell::new(&count.to_string()).style_spec("r")
+            Cell::new(&count.to_string()).style_spec("r"),
+            Cell::new(&format!("{:.2}%", percentage)).style_spec("r")
         ]));
     }
     status_table.printstd();
 
+    println!("\nSuccess Rate: {:.2}%", summary.success_rate() * 100.0);
+}
+
+fn print_resource_usage(cpu_samples: &[f64], memory_samples: &[f64], network_samples: &[(f64, f64)]) {
     println!("\nResource Usage");
     let mut resource_table = Table::new();
     resource_table.add_row(Row::new(vec![
@@ -61,31 +77,29 @@ pub fn print_test_results(
         Cell::new("Total")
     ]));
     
-    // Assuming 8 cores for CPU usage calculation
-    let cpu_cores = 8.0;
+    let cpu_cores = num_cpus::get() as f64;
     add_resource_row(&mut resource_table, "CPU Usage", cpu_samples, 
         |v| format!("{:.2}% ({:.2} cores)", v, v * cpu_cores / 100.0),
         |v| format!("{:.2}% ({:.2} cores)", v, v * cpu_cores / 100.0),
         None::<fn(f64) -> String>);
     
-    // Assuming 16 GB total memory for memory usage calculation
-    let total_memory_gb = 16.0;
+    let total_memory = sys_info::mem_info().map(|m| m.total as f64 / 1024.0).unwrap_or(0.0);
     add_resource_row(&mut resource_table, "Memory Usage", memory_samples,
-        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory_gb / 100.0),
-        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory_gb / 100.0),
+        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory / 100.0),
+        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory / 100.0),
         None::<fn(f64) -> String>);
     
     let network_received: Vec<f64> = network_samples.iter().map(|&(r, _)| r).collect();
     let network_sent: Vec<f64> = network_samples.iter().map(|&(_, s)| s).collect();
     
     add_resource_row(&mut resource_table, "Network Received", &network_received, 
-        |v| format!("{:.2} MB/s", v),
-        |v| format!("{:.2} MB/s", v),
-        Some(|v| format!("{:.2} MB", v)));
+        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
+        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
+        Some(|v| format_size((v * 1_000_000.0) as u64)));
     add_resource_row(&mut resource_table, "Network Sent", &network_sent, 
-        |v| format!("{:.2} MB/s", v),
-        |v| format!("{:.2} MB/s", v),
-        Some(|v| format!("{:.2} MB", v)));
+        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
+        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
+        Some(|v| format_size((v * 1_000_000.0) as u64)));
 
     resource_table.printstd();
 }
