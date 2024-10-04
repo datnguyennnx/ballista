@@ -1,0 +1,49 @@
+[
+    {
+        "name": "Get User",
+        "url": "https://jsonplaceholder.typicode.com/users/1",
+        "method": "GET",
+        "expected_status": 200,
+        "expected_body": {
+            "id": 1,
+            "name": "Leanne Graham",
+            "username": "Bret",
+            "email": "Sincere@april.biz"
+        }
+    },
+    {
+        "name": "Create Post",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "title": "foo",
+            "body": "bar",
+            "userId": 1
+        },
+        "expected_status": 201
+    },
+    {
+        "name": "Update Post",
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "method": "PUT",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "id": 1,
+            "title": "foo",
+            "body": "bar",
+            "userId": 1
+        },
+        "expected_status": 200
+    },
+    {
+        "name": "Delete Post",
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "method": "DELETE",
+        "expected_status": 200
+    }
+]

@@ -37,6 +37,10 @@ pub struct Args {
     /// Path to JSON configuration file
     #[arg(long)]
     config: Option<String>,
+
+    /// Path to API test JSON file
+    #[arg(long)]
+    api_test: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,6 +52,7 @@ pub struct Config {
     pub stress: bool,
     pub duration: Option<u64>,
     pub resource_usage: bool,
+    pub api_test: Option<String>,
 }
 
 impl Args {
@@ -83,22 +88,27 @@ impl Args {
         self.config.as_ref()
     }
 
-    /// Validate the arguments to ensure either URL or sitemap is provided
+    pub fn api_test(&self) -> Option<&String> {
+        self.api_test.as_ref()
+    }
+
+    /// Validate the arguments to ensure either URL, sitemap, or API test is provided
     pub fn validate(&self) -> Result<(), String> {
         if self.resource_usage {
             return Ok(());
         }
-        match (self.url(), self.sitemap()) {
-            (None, None) => Err("Either --url or --sitemap must be provided".to_string()),
-            (Some(_), Some(_)) => Err("Only one of --url or --sitemap should be provided".to_string()),
-            (Some(url), None) => {
+        match (self.url(), self.sitemap(), self.api_test()) {
+            (None, None, None) => Err("Either --url, --sitemap, or --api-test must be provided".to_string()),
+            (Some(_), Some(_), _) => Err("Only one of --url, --sitemap, or --api-test should be provided".to_string()),
+            (Some(url), None, None) => {
                 if url.starts_with("http://") || url.starts_with("https://") {
                     Ok(())
                 } else {
                     Err("URL must start with http:// or https://".to_string())
                 }
             },
-            (None, Some(_)) => Ok(()),
+            (None, Some(_), None) | (None, None, Some(_)) => Ok(()),
+            _ => Err("Invalid combination of arguments".to_string()),
         }
     }
 
@@ -119,6 +129,7 @@ impl Args {
                 duration: config.duration,
                 resource_usage: config.resource_usage,
                 config: Some(path.to_string_lossy().into_owned()),
+                api_test: config.api_test,
             })
             .and_then(|args| args.validate().map(|_| args))
     }

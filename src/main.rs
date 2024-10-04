@@ -5,6 +5,7 @@ use std::sync::atomic::AtomicBool;
 use tokio::sync::Mutex;
 use std::path::Path;
 use std::time::Duration;
+use std::fs;
 
 mod args;
 mod metrics;
@@ -12,6 +13,7 @@ mod http_client;
 mod utils;
 mod structure_output;
 mod resource_monitor;
+mod api_tester;
 
 use args::Args;
 use metrics::Metrics;
@@ -19,6 +21,7 @@ use http_client::{load_test, stress_test, TestConfig};
 use utils::{parse_sitemap, format_duration, UtilError};
 use structure_output::print_test_results;
 use resource_monitor::ResourceMonitor;
+use api_tester::{ReqwestClient, run_tests, load_tests_from_json, analyze_results};
 
 #[derive(Debug)]
 enum AppError {
@@ -81,12 +84,44 @@ async fn run_test(config: TestConfig, metrics: Arc<Mutex<Metrics>>, is_finished:
     }
 }
 
+async fn run_api_tests(api_test_path: &str) -> Result<(), AppError> {
+    let json_content = fs::read_to_string(api_test_path)
+        .map_err(|e| AppError::Other(Box::new(e)))?;
+    
+    let tests = load_tests_from_json(&json_content)
+        .map_err(|e| AppError::Other(Box::new(e)))?;
+
+    let client = ReqwestClient::new();
+    let results = run_tests(&client, &tests).await;
+
+    let (total, successful, total_duration) = analyze_results(&results);
+
+    println!("\nAPI Test Results");
+    println!("Total tests: {}", total);
+    println!("Successful tests: {}", successful);
+    println!("Total duration: {}", format_duration(total_duration));
+
+    for result in results {
+        println!("\nTest: {}", result.name);
+        println!("Success: {}", result.success);
+        println!("Duration: {}", format_duration(result.duration));
+        println!("Status: {}", result.status);
+        if let Some(error) = result.error {
+            println!("Error: {}", error);
+        }
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     let args = parse_arguments().await?;
     let is_finished = Arc::new(AtomicBool::new(false));
 
-    if args.resource_usage() {
+    if let Some(api_test_path) = args.api_test() {
+        run_api_tests(api_test_path).await?;
+    } else if args.resource_usage() {
         println!("Collecting resource usage data for 60 seconds");
         let resource_monitor = ResourceMonitor::new(Arc::clone(&is_finished));
         let resource_monitor_handle = tokio::spawn(resource_monitor.start());

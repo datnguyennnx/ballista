@@ -1,12 +1,13 @@
-# Target CLI - Advanced Load Testing Tool (v0.1.0)
+# Target CLI - Advanced Load Testing and API Testing Tool (v0.1.0)
 
-Target CLI is a command-line load testing tool written in Rust. It allows you to perform both load tests and stress tests on web applications, providing detailed performance metrics and resource usage statistics. This tool is designed to help developers and system administrators evaluate the performance and scalability of their web applications under various load conditions.
+Target CLI is a command-line tool written in Rust for load testing and API testing of web applications. It provides detailed performance metrics, resource usage statistics, and API test results to help developers and system administrators evaluate the performance, scalability, and correctness of their web applications.
 
 ## Features
 
 -   **Flexible Testing Modes**:
     -   Load testing with a specified number of requests
     -   Stress testing for a specified duration
+    -   API testing with customizable test cases
 -   **Concurrent Request Handling**: Simulate multiple users accessing the application simultaneously
 -   **Multiple URL Support**: Test single URLs or multiple URLs from a sitemap
 -   **Real-time Progress Tracking**: Monitor the test progress with a dynamic progress bar
@@ -22,6 +23,7 @@ Target CLI is a command-line load testing tool written in Rust. It allows you to
 -   **Color-coded Output**: Improve readability with color-coded status codes and formatted tables
 -   **Human-readable Formatting**: Durations and sizes are formatted for easy reading
 -   **Improved Error Handling**: Custom error types for better error reporting and handling
+-   **API Testing**: Define and run API tests using JSON configuration files
 
 ## Installation
 
@@ -45,7 +47,7 @@ To install Target CLI, you need to have Rust and Cargo installed on your system.
 ## Usage
 
 ```
-target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH>
+target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH> | --api-test <API_TEST_JSON>
 ```
 
 ### Options
@@ -58,6 +60,7 @@ target [OPTIONS] --url <URL> | --sitemap <SITEMAP_PATH>
 -   `-d, --duration <DURATION>`: Duration of the stress test in seconds (default: 60, only used if --stress is set)
 -   `--resource-usage`: Collect and display resource usage data for 60 seconds
 -   `--config <CONFIG_PATH>`: Path to JSON configuration file
+-   `--api-test <API_TEST_JSON>`: Path to API test JSON file
 
 ### Example Usage
 
@@ -92,6 +95,14 @@ target --resource-usage
 ```
 
 This command will collect and display resource usage data for 60 seconds without performing any load testing.
+
+#### API Testing
+
+```
+target --api-test path/to/api_tests.json
+```
+
+This command will run the API tests defined in the specified JSON file.
 
 #### JSON Configuration
 
@@ -150,6 +161,64 @@ Success Rate: 98.50%
 
 This output provides a comprehensive overview of the test results, including performance metrics and resource usage statistics. The HTTP status codes are color-coded in the actual output (green for 2xx, yellow for 3xx, red for 4xx and 5xx) to improve readability. Durations and sizes are formatted for easy reading using the new utility functions.
 
+## API Testing
+
+The API testing feature allows you to define and run a series of API tests using a JSON configuration file. Each test can specify the HTTP method, URL, headers, request body, and expected response status.
+
+### API Test JSON Format
+
+```json
+[
+    {
+        "name": "Get User",
+        "url": "https://api.example.com/users/1",
+        "method": "GET",
+        "expected_status": 200,
+        "expected_body": {
+            "id": 1,
+            "name": "John Doe"
+        }
+    },
+    {
+        "name": "Create Post",
+        "url": "https://api.example.com/posts",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": {
+            "title": "New Post",
+            "content": "This is a new post."
+        },
+        "expected_status": 201
+    }
+]
+```
+
+Each test in the JSON array can have the following properties:
+
+-   `name`: A descriptive name for the test
+-   `url`: The URL to send the request to
+-   `method`: The HTTP method (GET, POST, PUT, DELETE, etc.)
+-   `headers`: (Optional) An object containing request headers
+-   `body`: (Optional) The request body for POST/PUT requests
+-   `expected_status`: The expected HTTP status code of the response
+-   `expected_body`: (Optional) The expected response body (partial match)
+
+### Running API Tests
+
+To run API tests, use the `--api-test` option followed by the path to your JSON file:
+
+```
+target --api-test examples/sample_restfulAPI_test.json
+```
+
+The tool will execute each test in the JSON file and provide a summary of the results, including whether each test passed or failed, the response status, and any errors encountered.
+
+## Output
+
+The tool provides detailed output including test configuration summary, real-time progress bar, comprehensive test results table, HTTP status code distribution, and resource usage statistics. For API testing, it will display the results of each API test.
+
 ## Implementation Details
 
 Target CLI is implemented in Rust and utilizes several key components:
@@ -160,6 +229,7 @@ Target CLI is implemented in Rust and utilizes several key components:
 -   `structure_output.rs`: Formats and displays test results using colored output and tables
 -   `utils.rs`: Provides utility functions for parsing sitemaps, collecting system resource usage, and formatting durations and sizes
 -   `resource_monitor.rs`: Manages the collection of system resource usage data
+-   `api_tester.rs`: Handles API testing functionality
 -   `main.rs`: Orchestrates the overall flow of the application
 
 The tool uses asynchronous programming with `tokio` for efficient concurrent request handling and `reqwest` for HTTP client functionality. It also leverages `sysinfo` for system resource monitoring, `prettytable-rs` for formatted output, and `thiserror` for improved error handling.
@@ -180,6 +250,7 @@ Target CLI relies on the following main dependencies:
 -   `num_cpus`: CPU information
 -   `sys-info`: Additional system information
 -   `thiserror`: Custom error type definitions
+-   `async-trait`: Async trait support
 
 For a complete list of dependencies, please refer to the `Cargo.toml` file.
 

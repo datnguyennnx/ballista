@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+-   New API testing functionality
+-   `api_tester.rs` module for handling API tests
+-   Support for running API tests from JSON configuration files
+-   `--api-test` command-line option for specifying API test JSON files
+-   Example API test JSON file in `examples/sample_restfulAPI_test.json`
+
+### Changed
+
+-   Updated `main.rs` to incorporate API testing logic
+-   Modified `args.rs` to include the new `--api-test` option
+-   Updated README.md with information about the new API testing feature
+
+### Updated
+
+-   Dependencies in Cargo.toml, including new crates: `async-trait` and `mockall` (for testing)
+
 ## [0.1.0] - 2024-09-30
 
 ### Added
