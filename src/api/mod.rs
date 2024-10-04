@@ -1,4 +1,5 @@
 mod tester;
-mod types;
+pub mod types;
 
 pub use tester::*;
+pub use types::*;

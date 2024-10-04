@@ -14,7 +14,7 @@ pub struct RequestResult {
 pub struct TestConfig {
     pub urls: Arc<Vec<String>>,
     pub concurrency: u32,
-    pub total_requests: u32,
+    pub total_requests: Option<u32>,
     pub duration: Option<u64>,
 }
 

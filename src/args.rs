@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -6,109 +6,81 @@ use std::path::Path;
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// URL to test. Either this or --sitemap must be provided
-    #[arg(long)]
-    url: Option<String>,
+    #[command(subcommand)]
+    pub command: Command,
+}
 
-    /// Path to sitemap XML file. Either this or --url must be provided
-    #[arg(long)]
-    sitemap: Option<String>,
+#[derive(Subcommand, Debug, Serialize, Deserialize)]
+pub enum Command {
+    #[command(name = "load-test")]
+    LoadTest {
+        /// URL to test
+        #[arg(long)]
+        url: String,
 
-    /// Number of requests to send (ignored if --stress is set)
-    #[arg(short, long)]
-    requests: Option<u32>,
+        /// Number of requests to send
+        #[arg(short, long, default_value = "100")]
+        requests: u32,
 
-    /// Number of concurrent requests
-    #[arg(short, long)]
-    concurrency: Option<u32>,
+        /// Number of concurrent requests
+        #[arg(short, long, default_value = "10")]
+        concurrency: u32,
+    },
+    #[command(name = "stress-test")]
+    StressTest {
+        /// Path to sitemap XML file
+        #[arg(long)]
+        sitemap: String,
 
-    /// Enable stress test mode (runs for a specified duration instead of a fixed number of requests)
-    #[arg(short, long)]
-    stress: bool,
+        /// Duration of the stress test in seconds
+        #[arg(short, long, default_value = "300")]
+        duration: u64,
 
-    /// Duration of the stress test in seconds (only used if --stress is set)
-    #[arg(short, long)]
-    duration: Option<u64>,
-
-    /// Collect and display resource usage data for 60 seconds
-    #[arg(long)]
-    resource_usage: bool,
-
-    /// Path to JSON configuration file
-    #[arg(long)]
-    config: Option<String>,
-
-    /// Path to API test JSON file
-    #[arg(long)]
-    api_test: Option<String>,
+        /// Number of concurrent requests
+        #[arg(short, long, default_value = "50")]
+        concurrency: u32,
+    },
+    #[command(name = "api-test")]
+    ApiTest {
+        /// Path to API test JSON file
+        #[arg(long)]
+        path: String,
+    },
+    #[command(name = "resource-usage")]
+    ResourceUsage,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub url: Option<String>,
-    pub sitemap: Option<String>,
-    pub requests: Option<u32>,
-    pub concurrency: Option<u32>,
-    pub stress: bool,
-    pub duration: Option<u64>,
-    pub resource_usage: bool,
-    pub api_test: Option<String>,
+    pub command: Command,
 }
 
 impl Args {
-    pub fn url(&self) -> Option<&String> {
-        self.url.as_ref()
-    }
-
-    pub fn sitemap(&self) -> Option<&String> {
-        self.sitemap.as_ref()
-    }
-
-    pub fn requests(&self) -> u32 {
-        self.requests.unwrap_or(100)
-    }
-
-    pub fn concurrency(&self) -> u32 {
-        self.concurrency.unwrap_or(10)
-    }
-
-    pub fn stress(&self) -> bool {
-        self.stress
-    }
-
-    pub fn duration(&self) -> u64 {
-        self.duration.unwrap_or(60)
-    }
-
-    pub fn resource_usage(&self) -> bool {
-        self.resource_usage
-    }
-
-    pub fn config(&self) -> Option<&String> {
-        self.config.as_ref()
-    }
-
-    pub fn api_test(&self) -> Option<&String> {
-        self.api_test.as_ref()
-    }
-
-    /// Validate the arguments to ensure either URL, sitemap, or API test is provided
+    /// Validate the arguments
     pub fn validate(&self) -> Result<(), String> {
-        if self.resource_usage {
-            return Ok(());
-        }
-        match (self.url(), self.sitemap(), self.api_test()) {
-            (None, None, None) => Err("Either --url, --sitemap, or --api-test must be provided".to_string()),
-            (Some(_), Some(_), _) => Err("Only one of --url, --sitemap, or --api-test should be provided".to_string()),
-            (Some(url), None, None) => {
+        match &self.command {
+            Command::LoadTest { url, .. } => {
                 if url.starts_with("http://") || url.starts_with("https://") {
                     Ok(())
                 } else {
                     Err("URL must start with http:// or https://".to_string())
                 }
             },
-            (None, Some(_), None) | (None, None, Some(_)) => Ok(()),
-            _ => Err("Invalid combination of arguments".to_string()),
+            Command::StressTest { sitemap, .. } => {
+                if sitemap.ends_with(".xml") {
+                    Ok(())
+                } else {
+                    Err("Sitemap file must have .xml extension".to_string())
+                }
+            },
+            Command::ApiTest { path } => {
+                if path.ends_with(".json") {
+                    Ok(())
+                } else {
+                    Err("API test file must have .json extension".to_string())
+                }
+            },
+            Command::ResourceUsage => Ok(()),
         }
     }
 
@@ -121,15 +93,7 @@ impl Args {
                     .map_err(|e| format!("Failed to parse JSON: {}", e))
             })
             .map(|config| Args {
-                url: config.url,
-                sitemap: config.sitemap,
-                requests: config.requests,
-                concurrency: config.concurrency,
-                stress: config.stress,
-                duration: config.duration,
-                resource_usage: config.resource_usage,
-                config: Some(path.to_string_lossy().into_owned()),
-                api_test: config.api_test,
+                command: config.command,
             })
             .and_then(|args| args.validate().map(|_| args))
     }

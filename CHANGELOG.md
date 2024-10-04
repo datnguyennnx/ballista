@@ -9,16 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
--   Comprehensive README with usage instructions and examples
--   API testing functionality with JSON-based test definitions
--   Resource usage monitoring for CPU, Memory, and Network
--   Stress testing mode for duration-based testing
--   Support for loading multiple URLs from a sitemap
--   Colorized and formatted output for better readability
+-   Implemented explicit naming for subcommands in the CLI interface
+-   Added support for `load-test`, `stress-test`, `api-test`, and `resource-usage` subcommands
 
 ### Changed
 
--   Refactored the entire codebase for better modularity and maintainability
--   Separated concerns into distinct modules: api, http, metrics, monitoring, output, and utils
--   Improved error handling and reporting
 -   Enhanced performance metrics and statistics
+-   Updated `TestConfig` struct to use `Option<u32>` for `total_requests`, allowing more flexible test configurations
+-   Refactored `main.rs` to improve code organization and readability
+-   Separated application logic into a new `app.rs` file for better modularity
+-   Improved type consistency across the project, particularly in the HTTP client module
+-   Updated `Args` struct and `Command` enum in `src/args.rs` to use explicit subcommand names
+
+### Fixed
+
+-   Resolved issues related to handling optional total requests in load and stress tests
+-   Fixed the `load-test` command recognition in the CLI interface

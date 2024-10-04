@@ -11,6 +11,7 @@ Target Tool is a versatile Rust-based application for performing load testing, s
 -   Support for testing single URLs or multiple URLs from a sitemap
 -   Detailed performance metrics and statistics
 -   Colorized and formatted output for easy reading
+-   Flexible test configurations with optional total requests
 
 ## Installation
 
@@ -30,44 +31,49 @@ Target Tool is a versatile Rust-based application for performing load testing, s
 Run the tool using the following command:
 
 ```
-cargo run --release -- [OPTIONS]
+cargo run --release -- <COMMAND> [OPTIONS]
 ```
+
+### Commands
+
+-   `load-test`: Perform a load test
+-   `stress-test`: Perform a stress test
+-   `api-test`: Run API tests
+-   `resource-usage`: Monitor resource usage
 
 ### Options
 
--   `--url <URL>`: URL to test
--   `--sitemap <PATH>`: Path to sitemap XML file
--   `-r, --requests <NUMBER>`: Number of requests to send (default: 100)
+-   `--url <URL>`: URL to test (for load and stress tests)
+-   `--sitemap <PATH>`: Path to sitemap XML file (for load and stress tests)
+-   `-r, --requests <NUMBER>`: Number of requests to send (optional for stress tests)
 -   `-c, --concurrency <NUMBER>`: Number of concurrent requests (default: 10)
--   `-s, --stress`: Enable stress test mode
 -   `-d, --duration <SECONDS>`: Duration of the stress test in seconds (default: 60)
--   `--resource-usage`: Collect and display resource usage data for 60 seconds
 -   `--config <PATH>`: Path to JSON configuration file
--   `--api-test <PATH>`: Path to API test JSON file
+-   `<PATH>`: Path to API test JSON file (for api-test command)
 
 ### Examples
 
 1. Load test a single URL:
 
     ```
-    cargo run --release -- --url https://example.com -r 1000 -c 20
+    cargo run --release -- load-test --url https://example.com -r 1000 -c 20
     ```
 
 2. Stress test using a sitemap:
 
     ```
-    cargo run --release -- --sitemap path/to/sitemap.xml -s -d 300 -c 50
+    cargo run --release -- stress-test --sitemap path/to/sitemap.xml -d 300 -c 50
     ```
 
 3. Run API tests:
 
     ```
-    cargo run --release -- --api-test path/to/api_tests.json
+    cargo run --release -- api-test examples/sample_restfulAPI_test.json
     ```
 
 4. Monitor resource usage:
     ```
-    cargo run --release -- --resource-usage
+    cargo run --release -- resource-usage
     ```
 
 ## Configuration
@@ -79,9 +85,7 @@ You can use a JSON configuration file to specify test parameters. Create a file 
     "url": "https://example.com",
     "requests": 1000,
     "concurrency": 20,
-    "stress": false,
     "duration": 60,
-    "resource_usage": false,
     "api_test": "path/to/api_tests.json"
 }
 ```
@@ -89,7 +93,7 @@ You can use a JSON configuration file to specify test parameters. Create a file 
 Then run the tool with:
 
 ```
-cargo run --release -- --config config.json
+cargo run --release -- load-test --config config.json
 ```
 
 ## API Testing
@@ -126,7 +130,7 @@ To perform API tests, create a JSON file with test definitions:
 Then run the API tests with:
 
 ```
-cargo run --release -- --api-test path/to/api_tests.json
+cargo run --release -- api-test path/to/api_tests.json
 ```
 
 ## Contributing

@@ -19,7 +19,7 @@ pub async fn load_test(
     let config = TestConfig {
         urls,
         concurrency,
-        total_requests,
+        total_requests: Some(total_requests),
         duration: None,
     };
     perform_test(config, metrics, is_finished).await;
@@ -36,7 +36,7 @@ pub async fn stress_test(
     let config = TestConfig {
         urls,
         concurrency,
-        total_requests: u32::MAX,
+        total_requests: None,
         duration: Some(duration),
     };
     let end_time = tokio::time::Instant::now() + std::time::Duration::from_secs(duration);
@@ -56,9 +56,9 @@ async fn perform_test(
     is_finished: Arc<AtomicBool>,
 ) {
     let client = Arc::new(Client::new());
-    let pb = create_progress_bar(config.total_requests as u64);
+    let pb = config.total_requests.map(|total| create_progress_bar(total as u64));
 
-    let requests = stream::iter(0..config.total_requests)
+    let requests = stream::iter(std::iter::repeat(()).take(config.total_requests.unwrap_or(u32::MAX) as usize))
         .map(|_| {
             let client = Arc::clone(&client);
             let urls = Arc::clone(&config.urls);
@@ -67,7 +67,10 @@ async fn perform_test(
                 send_request(&client, url).await
             }
         })
-        .buffer_unordered(config.concurrency as usize);
+        .buffer_unordered(config.concurrency as usize)
+        .take_while(|_| async {
+            !is_finished.load(Ordering::SeqCst)
+        });
 
     requests
         .for_each(|result| {
@@ -78,12 +81,16 @@ async fn perform_test(
                     let mut metrics = metrics.lock().await;
                     metrics.add_request(req_result.duration, req_result.status, req_result.json);
                 }
-                pb.inc(1);
+                if let Some(pb) = &pb {
+                    pb.inc(1);
+                }
             }
         })
         .await;
 
-    pb.finish_with_message("Test completed");
+    if let Some(pb) = pb {
+        pb.finish_with_message("Test completed");
+    }
     is_finished.store(true, Ordering::SeqCst);
 }
 
