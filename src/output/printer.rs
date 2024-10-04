@@ -1,8 +1,7 @@
 use prettytable::{Table, Row, Cell, format};
 use std::time::Duration;
 use crate::metrics::MetricsSummary;
-use colored::{Colorize, ColoredString};
-use crate::utils::{format_duration, format_size};
+use crate::output::formatter::{status_color, format_cpu_usage, format_memory_usage, format_network_usage};
 
 pub fn print_test_results(
     summary: Option<&MetricsSummary>,
@@ -34,14 +33,14 @@ fn print_performance_results(summary: &MetricsSummary, total_duration: Duration)
     ]));
 
     table.add_row(Row::new(vec![
-        Cell::new(&summary.total_requests.to_string()),
-        Cell::new(&format_duration(total_duration)),
+        Cell::new(&summary.total_requests().to_string()),
+        Cell::new(&crate::utils::format_duration(total_duration)),
         Cell::new(&format!("{:.2}", summary.requests_per_second())),
-        Cell::new(&format_duration(summary.average_duration().unwrap_or_default())),
-        Cell::new(&summary.min_duration.map_or("N/A".to_string(), format_duration)),
-        Cell::new(&summary.max_duration.map_or("N/A".to_string(), format_duration)),
-        Cell::new(&summary.median_duration.map_or("N/A".to_string(), format_duration)),
-        Cell::new(&summary.percentile_95.map_or("N/A".to_string(), format_duration))
+        Cell::new(&crate::utils::format_duration(summary.average_duration().unwrap_or_default())),
+        Cell::new(&summary.min_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
+        Cell::new(&summary.max_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
+        Cell::new(&summary.median_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
+        Cell::new(&summary.percentile_95().map_or("N/A".to_string(), crate::utils::format_duration))
     ]));
 
     table.printstd();
@@ -54,8 +53,8 @@ fn print_performance_results(summary: &MetricsSummary, total_duration: Duration)
         Cell::new("Count").style_spec("b"),
         Cell::new("Percentage").style_spec("b")
     ]));
-    for (status, count) in &summary.status_codes {
-        let percentage = (*count as f64 / summary.total_requests as f64) * 100.0;
+    for (status, count) in summary.status_codes() {
+        let percentage = (*count as f64 / summary.total_requests() as f64) * 100.0;
         status_table.add_row(Row::new(vec![
             Cell::new(&status_color(*status).to_string()).style_spec("r"),
             Cell::new(&count.to_string()).style_spec("r"),
@@ -79,27 +78,27 @@ fn print_resource_usage(cpu_samples: &[f64], memory_samples: &[f64], network_sam
     
     let cpu_cores = num_cpus::get() as f64;
     add_resource_row(&mut resource_table, "CPU Usage", cpu_samples, 
-        |v| format!("{:.2}% ({:.2} cores)", v, v * cpu_cores / 100.0),
-        |v| format!("{:.2}% ({:.2} cores)", v, v * cpu_cores / 100.0),
+        |v| format_cpu_usage(v, cpu_cores),
+        |v| format_cpu_usage(v, cpu_cores),
         None::<fn(f64) -> String>);
     
     let total_memory = sys_info::mem_info().map(|m| m.total as f64 / 1024.0).unwrap_or(0.0);
     add_resource_row(&mut resource_table, "Memory Usage", memory_samples,
-        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory / 100.0),
-        |v| format!("{:.2}% ({:.2} GB)", v, v * total_memory / 100.0),
+        |v| format_memory_usage(v, total_memory),
+        |v| format_memory_usage(v, total_memory),
         None::<fn(f64) -> String>);
     
     let network_received: Vec<f64> = network_samples.iter().map(|&(r, _)| r).collect();
     let network_sent: Vec<f64> = network_samples.iter().map(|&(_, s)| s).collect();
     
     add_resource_row(&mut resource_table, "Network Received", &network_received, 
-        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
-        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
-        Some(|v| format_size((v * 1_000_000.0) as u64)));
+        format_network_usage,
+        format_network_usage,
+        Some(|v| crate::utils::format_size((v * 1_000_000.0) as u64)));
     add_resource_row(&mut resource_table, "Network Sent", &network_sent, 
-        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
-        |v| format!("{}/s", format_size((v * 1_000_000.0) as u64)),
-        Some(|v| format_size((v * 1_000_000.0) as u64)));
+        format_network_usage,
+        format_network_usage,
+        Some(|v| crate::utils::format_size((v * 1_000_000.0) as u64)));
 
     resource_table.printstd();
 }
@@ -139,14 +138,5 @@ fn add_resource_row<F, G, H>(
             Cell::new("N/A"),
             Cell::new("N/A"),
         ]));
-    }
-}
-
-fn status_color(status: u16) -> ColoredString {
-    match status {
-        200..=299 => status.to_string().green(),
-        300..=399 => status.to_string().yellow(),
-        400..=599 => status.to_string().red(),
-        _ => status.to_string().normal(),
     }
 }

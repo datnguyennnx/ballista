@@ -7,21 +7,22 @@ use std::path::Path;
 use std::time::Duration;
 use std::fs;
 
+mod api;
 mod args;
+mod http;
 mod metrics;
-mod http_client;
+mod monitoring;
+mod output;
 mod utils;
-mod structure_output;
-mod resource_monitor;
-mod api_tester;
 
 use args::Args;
 use metrics::Metrics;
-use http_client::{load_test, stress_test, TestConfig};
-use utils::{parse_sitemap, format_duration, UtilError};
-use structure_output::print_test_results;
-use resource_monitor::ResourceMonitor;
-use api_tester::{ReqwestClient, run_tests, load_tests_from_json, analyze_results};
+use http::{load_test, stress_test, TestConfig};
+use utils::parsers::{parse_sitemap, UtilError};
+use utils::formatters::format_duration;
+use output::printer::print_test_results;
+use monitoring::ResourceMonitor;
+use api::{ReqwestClient, run_tests, load_tests_from_json, analyze_results};
 
 #[derive(Debug)]
 enum AppError {
