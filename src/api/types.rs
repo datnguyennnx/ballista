@@ -33,3 +33,26 @@ impl From<reqwest::Error> for ApiTestError {
         ApiTestError::ReqwestError(error)
     }
 }
+
+// Pure function to create a new TestResult
+pub fn create_test_result(
+    name: String,
+    success: bool,
+    duration: Duration,
+    status: u16,
+    error: Option<String>,
+) -> TestResult {
+    TestResult {
+        name,
+        success,
+        duration,
+        status,
+        error,
+    }
+}
+
+// Pure function to check if a test is successful
+pub fn is_test_successful(test: &ApiTest, status: u16, body: &Option<Value>) -> bool {
+    status == test.expected_status && 
+    (test.expected_body.is_none() || body == &test.expected_body)
+}

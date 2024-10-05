@@ -1,6 +1,6 @@
 [package]
 name = "target-tool"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -20,6 +20,7 @@ sysinfo = "0.29"
 num_cpus = "1.15"
 sys-info = "0.9"
 rand = "0.8"
+dirs = "5.0"
 
 [dev-dependencies]
 mockall = "0.11"

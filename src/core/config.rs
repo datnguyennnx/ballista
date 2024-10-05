@@ -1,103 +1,158 @@
+use crate::prelude::*;
+use crate::args::{Args, Command};
+use crate::utils::parsers::{parse_urls, parse_json};
+use std::path::PathBuf;
+use tokio::fs;
 use clap::Parser;
-use std::path::Path;
-use std::sync::Arc;
-
-use crate::core::error::AppError;
-use crate::utils::parsers::parse_sitemap;
-
-#[derive(Parser, Debug, Clone)]
-#[command(author, version, about, long_about = None)]
-pub struct Args {
-    #[command(subcommand)]
-    pub command: Command,
-}
-
-#[derive(Parser, Debug, Clone)]
-pub enum Command {
-    LoadTest {
-        /// URL to test
-        #[arg(long)]
-        url: String,
-
-        /// Number of requests to send
-        #[arg(short, long, default_value = "100")]
-        requests: u32,
-
-        /// Number of concurrent requests
-        #[arg(short, long, default_value = "10")]
-        concurrency: u32,
-    },
-    StressTest {
-        /// Path to sitemap XML file
-        #[arg(long)]
-        sitemap: String,
-
-        /// Duration of the stress test in seconds
-        #[arg(short, long, default_value = "300")]
-        duration: u64,
-
-        /// Number of concurrent requests
-        #[arg(short, long, default_value = "50")]
-        concurrency: u32,
-    },
-    ApiTest {
-        /// Path to API test JSON file
-        #[arg(long)]
-        path: String,
-    },
-    ResourceUsage,
-}
-
-impl Args {
-    pub fn from_json(_path: &Path) -> Result<Self, AppError> {
-        // Implement JSON parsing logic
-        // ...
-        Err(AppError::Other(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "JSON parsing not yet implemented",
-        ))))
-    }
-
-    pub fn validate(&self) -> Result<(), AppError> {
-        match &self.command {
-            Command::LoadTest { url, .. } => {
-                if !url.starts_with("http://") && !url.starts_with("https://") {
-                    return Err(AppError::ArgValidation("URL must start with http:// or https://".into()));
-                }
-            },
-            Command::StressTest { sitemap, .. } => {
-                if !sitemap.ends_with(".xml") {
-                    return Err(AppError::ArgValidation("Sitemap file must have .xml extension".into()));
-                }
-            },
-            Command::ApiTest { path } => {
-                if !path.ends_with(".json") {
-                    return Err(AppError::ArgValidation("API test file must have .json extension".into()));
-                }
-            },
-            Command::ResourceUsage => {},
-        }
-        Ok(())
-    }
-}
 
 pub async fn parse_arguments() -> Result<Args, AppError> {
-    let args = Args::parse();
-    args.validate()?;
-    Ok(args)
+    Args::try_parse().map_err(|e| AppError::ArgValidation(e.to_string()))
 }
 
-pub fn prepare_urls(command: &Command) -> Result<Arc<Vec<String>>, AppError> {
+pub async fn prepare_urls(command: &Command) -> Result<Vec<String>, AppError> {
     match command {
-        Command::LoadTest { url, .. } => Ok(Arc::new(vec![url.to_string()])),
-        Command::StressTest { sitemap, .. } => {
-            let urls = parse_sitemap(sitemap).map_err(|e| AppError::Other(Box::new(e)))?;
-            if urls.is_empty() {
-                Err(AppError::NoUrls)
-            } else {
-                Ok(Arc::new(urls))
-            }
-        },
-        _ => Err(AppError::ArgValidation("Invalid command for preparing URLs".into())),
+        Command::LoadTest { url, .. } => Ok(vec![url.clone()]),
+        Command::StressTest { sitemap, .. } => 
+            fs::read_to_string(sitemap)
+                .await
+                .map_err(|e| AppError::FileError(e.to_string()))
+                .and_then(|content| parse_urls(&content).map_err(|e| AppError::ParseError(e.to_string()))),
+        _ => Err(AppError::InvalidConfig("Invalid command for URL preparation".to_string())),
+    }
+}
+
+pub fn validate(args: &Args) -> Result<(), AppError> {
+    let validate_url = |url: &str| {
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            Err(AppError::ArgValidation(format!("Invalid URL: {}", url)))
+        } else {
+            Ok(())
+        }
+    };
+
+    let validate_file = |path: &str, extension: &str| {
+        if !path.ends_with(extension) {
+            Err(AppError::ArgValidation(format!("Invalid file: {}", path)))
+        } else {
+            Ok(())
+        }
+    };
+
+    match &args.command {
+        Command::LoadTest { url, .. } => validate_url(url),
+        Command::StressTest { sitemap, .. } => validate_file(sitemap, ".xml"),
+        Command::ApiTest { path } => validate_file(path, ".json"),
+        Command::ResourceUsage => Ok(()),
+    }
+}
+
+pub async fn load_config(path: &str) -> Result<Args, AppError> {
+    fs::read_to_string(path)
+        .await
+        .map_err(|e| AppError::FileError(e.to_string()))
+        .and_then(|content| parse_json(&content).map_err(|e| AppError::ParseError(e.to_string())))
+        .and_then(|config: Args| validate(&config).map(|_| config))
+}
+
+pub fn get_config_path() -> PathBuf {
+    dirs::config_dir()
+        .map(|path| path.join("target-tool").join("config.json"))
+        .unwrap_or_else(|| PathBuf::from("config.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio;
+
+    #[tokio::test]
+    async fn test_prepare_urls_load_test() {
+        let command = Command::LoadTest {
+            url: "https://example.com".to_string(),
+            requests: 10,
+            concurrency: 2,
+        };
+        let urls = prepare_urls(&command).await.unwrap();
+        assert_eq!(urls, vec!["https://example.com"]);
+    }
+
+    #[tokio::test]
+    async fn test_prepare_urls_stress_test() {
+        let command = Command::StressTest {
+            sitemap: "tests/sample_sitemap.xml".to_string(),
+            duration: 60,
+            concurrency: 5,
+        };
+        let urls = prepare_urls(&command).await.unwrap();
+        assert!(!urls.is_empty());
+        assert!(urls.iter().all(|url| url.starts_with("http")));
+    }
+
+    #[test]
+    fn test_validate_load_test() {
+        let args = Args {
+            command: Command::LoadTest {
+                url: "https://example.com".to_string(),
+                requests: 10,
+                concurrency: 2,
+            },
+        };
+        assert!(validate(&args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_stress_test() {
+        let args = Args {
+            command: Command::StressTest {
+                sitemap: "sitemap.xml".to_string(),
+                duration: 60,
+                concurrency: 5,
+            },
+        };
+        assert!(validate(&args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_api_test() {
+        let args = Args {
+            command: Command::ApiTest {
+                path: "tests.json".to_string(),
+            },
+        };
+        assert!(validate(&args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_invalid_url() {
+        let args = Args {
+            command: Command::LoadTest {
+                url: "invalid-url".to_string(),
+                requests: 10,
+                concurrency: 2,
+            },
+        };
+        assert!(validate(&args).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_sitemap() {
+        let args = Args {
+            command: Command::StressTest {
+                sitemap: "sitemap.txt".to_string(),
+                duration: 60,
+                concurrency: 5,
+            },
+        };
+        assert!(validate(&args).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_test_file() {
+        let args = Args {
+            command: Command::ApiTest {
+                path: "tests.txt".to_string(),
+            },
+        };
+        assert!(validate(&args).is_err());
     }
 }

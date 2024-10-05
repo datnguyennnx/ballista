@@ -1,142 +1,156 @@
-use prettytable::{Table, Row, Cell, format};
-use std::time::Duration;
-use crate::metrics::MetricsSummary;
-use crate::output::formatter::{status_color, format_cpu_usage, format_memory_usage, format_network_usage};
+use crate::prelude::*;
+use crate::metrics::summary::MetricsSummary;
+use prettytable::{Table, Row, Cell};
 
-pub fn print_test_results(
+pub fn format_test_results(
     summary: Option<&MetricsSummary>,
     total_duration: Option<Duration>,
     cpu_samples: &[f64],
     memory_samples: &[f64],
-    network_samples: &[(f64, f64)]
-) {
+    network_samples: &[(f64, f64)],
+) -> String {
+    let mut output = String::new();
+
     if let Some(summary) = summary {
-        print_performance_results(summary, total_duration.unwrap());
+        output.push_str(&format_summary(summary));
     }
 
-    print_resource_usage(cpu_samples, memory_samples, network_samples);
+    if let Some(duration) = total_duration {
+        output.push_str(&format!("\nTotal duration: {}\n", format_duration(duration)));
+    }
+
+    output.push_str(&format_resource_usage(cpu_samples, memory_samples, network_samples));
+
+    output
 }
 
-fn print_performance_results(summary: &MetricsSummary, total_duration: Duration) {
-    println!("\nTest Results");
-
+fn format_summary(summary: &MetricsSummary) -> String {
     let mut table = Table::new();
     table.add_row(Row::new(vec![
-        Cell::new("Total requests"),
-        Cell::new("Total time"),
-        Cell::new("Requests per second"),
-        Cell::new("Average response time"),
-        Cell::new("Minimum response time"),
-        Cell::new("Maximum response time"),
-        Cell::new("Median response time"),
-        Cell::new("95th percentile response time")
+        Cell::new("Metric"),
+        Cell::new("Value"),
     ]));
 
-    table.add_row(Row::new(vec![
-        Cell::new(&summary.total_requests().to_string()),
-        Cell::new(&crate::utils::format_duration(total_duration)),
-        Cell::new(&format!("{:.2}", summary.requests_per_second())),
-        Cell::new(&crate::utils::format_duration(summary.average_duration().unwrap_or_default())),
-        Cell::new(&summary.min_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
-        Cell::new(&summary.max_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
-        Cell::new(&summary.median_duration().map_or("N/A".to_string(), crate::utils::format_duration)),
-        Cell::new(&summary.percentile_95().map_or("N/A".to_string(), crate::utils::format_duration))
-    ]));
+    let rows = vec![
+        ("Total Requests", summary.total_requests().to_string()),
+        ("Total Time", format_duration(summary.total_time())),
+        ("Requests/second", format!("{:.2}", summary.requests_per_second())),
+        ("Mean Response Time", format_duration(summary.average_duration().unwrap_or_default())),
+        ("Median Response Time", format_duration(summary.median_duration().unwrap_or_default())),
+        ("95th Percentile", format_duration(summary.percentile_95().unwrap_or_default())),
+        ("Min Response Time", format_duration(summary.min_duration().unwrap_or_default())),
+        ("Max Response Time", format_duration(summary.max_duration().unwrap_or_default())),
+    ];
 
-    table.printstd();
-
-    println!("\nHTTP Status Codes");
-    let mut status_table = Table::new();
-    status_table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-    status_table.set_titles(Row::new(vec![
-        Cell::new("Status Code").style_spec("b"),
-        Cell::new("Count").style_spec("b"),
-        Cell::new("Percentage").style_spec("b")
-    ]));
-    for (status, count) in summary.status_codes() {
-        let percentage = (*count as f64 / summary.total_requests() as f64) * 100.0;
-        status_table.add_row(Row::new(vec![
-            Cell::new(&status_color(*status).to_string()).style_spec("r"),
-            Cell::new(&count.to_string()).style_spec("r"),
-            Cell::new(&format!("{:.2}%", percentage)).style_spec("r")
+    for (metric, value) in rows {
+        table.add_row(Row::new(vec![
+            Cell::new(metric),
+            Cell::new(&value),
         ]));
     }
-    status_table.printstd();
 
-    println!("\nSuccess Rate: {:.2}%", summary.success_rate() * 100.0);
+    let mut result = table.to_string();
+    result.push_str("\nStatus Code Distribution:\n");
+    for (code, count) in summary.status_codes() {
+        result.push_str(&format!("{}: {}\n", code, count));
+    }
+
+    result
 }
 
-fn print_resource_usage(cpu_samples: &[f64], memory_samples: &[f64], network_samples: &[(f64, f64)]) {
-    println!("\nResource Usage");
-    let mut resource_table = Table::new();
-    resource_table.add_row(Row::new(vec![
-        Cell::new("Metric"),
-        Cell::new("Average"),
-        Cell::new("Maximum"),
-        Cell::new("Total")
+fn format_resource_usage(
+    cpu_samples: &[f64],
+    memory_samples: &[f64],
+    network_samples: &[(f64, f64)],
+) -> String {
+    let mut table = Table::new();
+    table.add_row(Row::new(vec![
+        Cell::new("Resource"),
+        Cell::new("Min"),
+        Cell::new("Max"),
+        Cell::new("Avg"),
     ]));
-    
-    let cpu_cores = num_cpus::get() as f64;
-    add_resource_row(&mut resource_table, "CPU Usage", cpu_samples, 
-        |v| format_cpu_usage(v, cpu_cores),
-        |v| format_cpu_usage(v, cpu_cores),
-        None::<fn(f64) -> String>);
-    
-    let total_memory = sys_info::mem_info().map(|m| m.total as f64 / 1024.0).unwrap_or(0.0);
-    add_resource_row(&mut resource_table, "Memory Usage", memory_samples,
-        |v| format_memory_usage(v, total_memory),
-        |v| format_memory_usage(v, total_memory),
-        None::<fn(f64) -> String>);
-    
-    let network_received: Vec<f64> = network_samples.iter().map(|&(r, _)| r).collect();
-    let network_sent: Vec<f64> = network_samples.iter().map(|&(_, s)| s).collect();
-    
-    add_resource_row(&mut resource_table, "Network Received", &network_received, 
-        format_network_usage,
-        format_network_usage,
-        Some(|v| crate::utils::format_size((v * 1_000_000.0) as u64)));
-    add_resource_row(&mut resource_table, "Network Sent", &network_sent, 
-        format_network_usage,
-        format_network_usage,
-        Some(|v| crate::utils::format_size((v * 1_000_000.0) as u64)));
 
-    resource_table.printstd();
+    let cpu_stats = calculate_stats(cpu_samples);
+    let memory_stats = calculate_stats(memory_samples);
+    let (network_in_stats, network_out_stats) = calculate_network_stats(network_samples);
+
+    let rows = vec![
+        ("CPU Usage (%)", cpu_stats),
+        ("Memory Usage (MB)", memory_stats),
+        ("Network In (KB/s)", network_in_stats),
+        ("Network Out (KB/s)", network_out_stats),
+    ];
+
+    for (resource, stats) in rows {
+        table.add_row(Row::new(vec![
+            Cell::new(resource),
+            Cell::new(&format!("{:.2}", stats.min)),
+            Cell::new(&format!("{:.2}", stats.max)),
+            Cell::new(&format!("{:.2}", stats.avg)),
+        ]));
+    }
+
+    table.to_string()
 }
 
-fn add_resource_row<F, G, H>(
-    table: &mut Table,
-    metric_name: &str,
-    samples: &[f64],
-    avg_format_fn: F,
-    max_format_fn: G,
-    total_format_fn: Option<H>
-) where
-    F: Fn(f64) -> String,
-    G: Fn(f64) -> String,
-    H: Fn(f64) -> String,
-{
-    if !samples.is_empty() {
-        let avg = samples.iter().sum::<f64>() / samples.len() as f64;
-        let max = samples.iter().fold(f64::NEG_INFINITY, |m, &v| m.max(v));
-        let total = samples.iter().sum::<f64>();
-        
-        let total_cell = match total_format_fn {
-            Some(ref f) => Cell::new(&f(total)),
-            None => Cell::new("N/A"),
-        };
-        
-        table.add_row(Row::new(vec![
-            Cell::new(metric_name),
-            Cell::new(&avg_format_fn(avg)),
-            Cell::new(&max_format_fn(max)),
-            total_cell,
-        ]));
-    } else {
-        table.add_row(Row::new(vec![
-            Cell::new(metric_name),
-            Cell::new("N/A"),
-            Cell::new("N/A"),
-            Cell::new("N/A"),
-        ]));
+#[derive(Debug, Clone, Copy)]
+struct Stats {
+    min: f64,
+    max: f64,
+    avg: f64,
+}
+
+fn calculate_stats(samples: &[f64]) -> Stats {
+    samples.iter().fold(Stats { min: f64::INFINITY, max: f64::NEG_INFINITY, avg: 0.0 }, |acc, &x| {
+        Stats {
+            min: acc.min.min(x),
+            max: acc.max.max(x),
+            avg: acc.avg + x / samples.len() as f64,
+        }
+    })
+}
+
+fn calculate_network_stats(samples: &[(f64, f64)]) -> (Stats, Stats) {
+    let (in_samples, out_samples): (Vec<f64>, Vec<f64>) = samples.iter().cloned().unzip();
+    (calculate_stats(&in_samples), calculate_stats(&out_samples))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_format_test_results() {
+        let summary = MetricsSummary::new(
+            100,
+            Duration::from_secs(10),
+            Some(Duration::from_millis(10)),
+            Some(Duration::from_millis(1000)),
+            Some(Duration::from_millis(50)),
+            Some(Duration::from_millis(950)),
+            &[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 404, 404, 404, 404, 404],
+        );
+
+        let cpu_samples = vec![10.0, 20.0, 30.0];
+        let memory_samples = vec![100.0, 200.0, 300.0];
+        let network_samples = vec![(1000.0, 2000.0), (1500.0, 2500.0), (2000.0, 3000.0)];
+
+        let result = format_test_results(
+            Some(&summary),
+            Some(Duration::from_secs(60)),
+            &cpu_samples,
+            &memory_samples,
+            &network_samples,
+        );
+
+        assert!(result.contains("Total Requests"));
+        assert!(result.contains("Requests/second"));
+        assert!(result.contains("Total duration: 1m 0s"));
+        assert!(result.contains("CPU Usage (%)"));
+        assert!(result.contains("Memory Usage (MB)"));
+        assert!(result.contains("Network In (KB/s)"));
+        assert!(result.contains("Network Out (KB/s)"));
     }
 }

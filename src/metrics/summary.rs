@@ -1,5 +1,6 @@
 use std::time::Duration;
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Clone)]
 pub struct MetricsSummary {
@@ -10,6 +11,20 @@ pub struct MetricsSummary {
     median_duration: Option<Duration>,
     percentile_95: Option<Duration>,
     status_codes: HashMap<u16, usize>,
+}
+
+impl fmt::Debug for MetricsSummary {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MetricsSummary")
+            .field("total_requests", &self.total_requests)
+            .field("total_time", &self.total_time)
+            .field("min_duration", &self.min_duration)
+            .field("max_duration", &self.max_duration)
+            .field("median_duration", &self.median_duration)
+            .field("percentile_95", &self.percentile_95)
+            .field("status_codes", &self.status_codes)
+            .finish()
+    }
 }
 
 impl MetricsSummary {
@@ -40,6 +55,10 @@ impl MetricsSummary {
 
     pub fn total_requests(&self) -> usize {
         self.total_requests
+    }
+
+    pub fn total_time(&self) -> Duration {
+        self.total_time
     }
 
     pub fn min_duration(&self) -> Option<Duration> {

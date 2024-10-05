@@ -1,3 +1,3 @@
-mod resource;
+pub mod resource;
 
-pub use resource::ResourceMonitor;
+pub use resource::monitor_resources;
