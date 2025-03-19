@@ -42,7 +42,6 @@ pub fn validate(args: &Args) -> Result<(), AppError> {
         Command::LoadTest { url, .. } => validate_url(url),
         Command::StressTest { sitemap, .. } => validate_file(sitemap, ".xml"),
         Command::ApiTest { path } => validate_file(path, ".json"),
-        Command::ResourceUsage => Ok(()),
     }
 }
 

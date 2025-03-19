@@ -46,8 +46,6 @@ pub enum Command {
         #[arg(long)]
         path: String,
     },
-    #[command(name = "resource-usage")]
-    ResourceUsage,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,7 +108,6 @@ impl Args {
                 validate(sitemap, validate_sitemap, ArgError::InvalidSitemap(sitemap.to_string())),
             Command::ApiTest { path } => 
                 validate(path, validate_test_file, ArgError::InvalidTestFile(path.to_string())),
-            Command::ResourceUsage => Ok(()),
         }
     }
 }
@@ -148,8 +145,8 @@ pub fn map_command<F, T>(args: &Args, f: F) -> T
 where
     F: Fn(&Command) -> T,
 {
-    f(&args.command)
-}
+        f(&args.command)
+    }
 
 // Higher-order function to filter commands
 pub fn filter_command<F>(args: &Args, predicate: F) -> Option<&Command>

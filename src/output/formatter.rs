@@ -1,5 +1,4 @@
 use colored::{Colorize, ColoredString};
-use crate::utils::format_size;
 
 // Higher-order function for status color mapping
 pub fn status_color_mapper() -> impl Fn(u16) -> ColoredString {
@@ -9,21 +8,6 @@ pub fn status_color_mapper() -> impl Fn(u16) -> ColoredString {
         400..=599 => status.to_string().red(),
         _ => status.to_string().normal(),
     }
-}
-
-// Curried function for formatting CPU usage
-pub fn format_cpu_usage(cpu_cores: f64) -> impl Fn(f64) -> String {
-    move |value| format!("{:.2}% ({:.2} cores)", value, value * cpu_cores / 100.0)
-}
-
-// Curried function for formatting memory usage
-pub fn format_memory_usage(total_memory: f64) -> impl Fn(f64) -> String {
-    move |value| format!("{:.2}% ({:.2} GB)", value, value * total_memory / 100.0)
-}
-
-// Function for formatting network usage
-pub fn format_network_usage(value: f64) -> String {
-    format!("{}/s", format_size((value * 1_000_000.0) as u64))
 }
 
 // Higher-order function for generic value formatting
@@ -54,23 +38,6 @@ mod tests {
         assert_eq!(color_mapper(302).to_string(), "302".yellow().to_string());
         assert_eq!(color_mapper(404).to_string(), "404".red().to_string());
         assert_eq!(color_mapper(600).to_string(), "600");
-    }
-
-    #[test]
-    fn test_format_cpu_usage() {
-        let cpu_formatter = format_cpu_usage(4.0);
-        assert_eq!(cpu_formatter(50.0), "50.00% (2.00 cores)");
-    }
-
-    #[test]
-    fn test_format_memory_usage() {
-        let memory_formatter = format_memory_usage(16.0);
-        assert_eq!(memory_formatter(75.0), "75.00% (12.00 GB)");
-    }
-
-    #[test]
-    fn test_format_network_usage() {
-        assert_eq!(format_network_usage(1.5), "1.50 MB/s");
     }
 
     #[test]

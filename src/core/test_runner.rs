@@ -9,7 +9,6 @@ use crate::prelude::*;
 use crate::http::{TestConfig, load_test, stress_test};
 use crate::output::printer::format_test_results;
 use crate::metrics::collector::{Metrics, new_metrics, calculate_summary};
-use crate::monitoring::resource::monitor_resources;
 
 // Pure function to create a client
 fn create_client() -> reqwest::Client {
@@ -68,19 +67,15 @@ where
 
     let start = Instant::now();
 
-    let (test_result, resource_samples) = tokio::join!(
-        run_test(&config, Arc::clone(&metrics), Arc::clone(&is_finished)),
-        monitor_resources(Arc::clone(&is_finished))
-    );
+    let test_result = run_test(&config, Arc::clone(&metrics), Arc::clone(&is_finished));
 
-    test_result?;
+    test_result.await?;
 
     let total_duration = get_duration().unwrap_or_else(|| start.elapsed());
     let metrics = metrics.lock().await;
     let summary = calculate_summary(&metrics);
 
-    let (cpu_samples, memory_samples, network_samples) = resource_samples?;
-    println!("{}", format_test_results(Some(&summary), Some(total_duration), &cpu_samples, &memory_samples, &network_samples));
+    println!("{}", format_test_results(Some(&summary), Some(total_duration)));
 
     Ok(())
 }

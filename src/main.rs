@@ -3,10 +3,7 @@ use target_tool::args::{Args, Command, args_from_json};
 use target_tool::core::config::parse_arguments;
 use target_tool::core::test_runner::{run_load_test, run_stress_test};
 use target_tool::core::api_test_runner::run_api_tests;
-use target_tool::monitoring::resource::monitor_resources;
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use tokio::runtime::Runtime;
 
 // Pure function to convert core::Command to args::Command
@@ -18,8 +15,6 @@ fn convert_command(core_command: target_tool::args::Command) -> Command {
             Command::StressTest { sitemap, duration, concurrency },
         target_tool::args::Command::ApiTest { path } => 
             Command::ApiTest { path },
-        target_tool::args::Command::ResourceUsage => 
-            Command::ResourceUsage,
     }
 }
 
@@ -51,15 +46,6 @@ async fn run_app(args: Args) -> Result<String, AppError> {
             run_api_tests(&path)
                 .await
                 .map(|_| "API tests completed successfully".to_string()),
-        Command::ResourceUsage => {
-            let is_finished = Arc::new(AtomicBool::new(false));
-            monitor_resources(Arc::clone(&is_finished))
-                .await
-                .map(|(cpu_samples, memory_samples, network_samples)| 
-                    format!("Resource usage monitored: {} CPU samples, {} memory samples, {} network samples", 
-                            cpu_samples.len(), memory_samples.len(), network_samples.len())
-                )
-        },
     }
 }
 

@@ -3,7 +3,6 @@ pub mod args;
 pub mod core;
 pub mod http;
 pub mod metrics;
-pub mod monitoring;
 pub mod output;
 pub mod utils;
 
@@ -11,14 +10,12 @@ pub mod utils;
 pub use crate::args::{Args, Command};
 pub use crate::core::error::AppError;
 pub use crate::metrics::collector::{Metrics, new_metrics, add_request, calculate_summary};
-pub use crate::monitoring::resource::monitor_resources;
 pub use crate::utils::formatters::format_duration;
 
 // Create a prelude module for commonly used items
 pub mod prelude {
     pub use super::{Args, Command, AppError};
     pub use super::{Metrics, new_metrics, add_request, calculate_summary};
-    pub use super::monitor_resources;
     pub use super::format_duration;
 
     pub use std::result::Result;
