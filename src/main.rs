@@ -1,6 +1,6 @@
 use tokio::net::TcpListener;
-use target_tool::api::server::create_api_server;
-use target_tool::core::app::AppState;
+use ballista::api::server::create_api_server;
+use ballista::core::app::AppState;
 use std::sync::Arc;
 
 #[tokio::main]

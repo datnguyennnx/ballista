@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified main.rs to focus solely on API server
 - Updated error handling to focus on API-specific errors
 - Removed CLI-related dependencies
+- Rename Target-tool to Ballista.
 
 ### Improved
 

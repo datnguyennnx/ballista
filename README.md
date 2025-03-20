@@ -1,116 +1,127 @@
-# Target Tool
+# Ballista
+Ballista - An ancient precision weapon, suggesting targeted and powerful testing
 
-Target Tool is a versatile Rust-based application for performing load testing, stress testing, and API testing. It provides detailed metrics and resource usage information to help you analyze the performance of your web applications and APIs. The project is implemented using functional programming principles to ensure modularity, testability, and maintainability.
+Ballista is a modern Rust-based RESTful API service for performing load testing, stress testing, and API testing. Built with Axum and following functional programming principles, it provides a robust HTTP interface for testing web applications and APIs.
 
 ## Features
 
--   Load testing with configurable number of requests and concurrency
--   Stress testing for a specified duration
--   API testing with custom test definitions
--   Resource usage monitoring (CPU, Memory, Network)
--   Support for testing single URLs or multiple URLs from a sitemap
--   Detailed performance metrics and statistics
--   Colorized and formatted output for easy reading
--   Flexible test configurations with optional total requests
+- RESTful API endpoints for:
+  - Load testing with configurable requests and concurrency
+  - Stress testing with specified duration
+  - API testing with custom test definitions
+- Real-time test status tracking
+- Detailed performance metrics and statistics
+- CORS support for web clients
+- Asynchronous test execution
+- Test results history
 
 ## Functional Programming Approach
 
-Target Tool is built using functional programming principles in Rust:
+Ballista is built using functional programming principles in Rust:
 
--   Immutability: We use immutable data structures wherever possible to prevent unexpected state changes.
--   Pure functions: Our core logic is implemented using pure functions that don't have side effects and always return the same output for the same input.
--   Higher-order functions: We utilize functions that take other functions as arguments or return functions, enabling flexible and composable code.
--   Function composition: Complex operations are built by combining simple functions, improving code readability and maintainability.
--   Avoiding side effects: We minimize functions that modify state outside their scope, making the code easier to reason about and test.
-
-These principles result in a more modular, testable, and maintainable codebase.
+- Immutability: Using immutable data structures to prevent unexpected state changes
+- Pure functions: Core logic implemented using pure functions without side effects
+- Higher-order functions: Functions that take other functions as arguments
+- Function composition: Complex operations built by combining simple functions
+- State isolation: Clear separation between state management and business logic
 
 ## Installation
 
-1. Ensure you have Rust and Cargo installed on your system.
+1. Ensure you have Rust and Cargo installed
 2. Clone this repository:
-    ```
-    git clone https://github.com/yourusername/target-tool.git
-    cd target-tool
-    ```
+```bash
+git clone https://github.com/datnguyennnx/ballista.git
+cd ballista
+```
+
 3. Build the project:
-    ```
-    cargo build --release
-    ```
-
-## Usage
-
-Run the tool using the following command:
-
-```
-cargo run --release -- <COMMAND> [OPTIONS]
+```bash
+cargo build --release
 ```
 
-### Commands
+## API Usage
 
--   `load-test`: Perform a load test
--   `stress-test`: Perform a stress test
--   `api-test`: Run API tests
--   `resource-usage`: Monitor resource usage
+Start the server:
+```bash
+cargo run --release
+```
 
-### Options
+The server will start on `http://localhost:3001`
 
--   `--url <URL>`: URL to test (for load and stress tests)
--   `--sitemap <PATH>`: Path to sitemap XML file (for load and stress tests)
--   `-r, --requests <NUMBER>`: Number of requests to send (optional for stress tests)
--   `-c, --concurrency <NUMBER>`: Number of concurrent requests (default: 10)
--   `-d, --duration <SECONDS>`: Duration of the stress test in seconds (default: 60)
--   `--config <PATH>`: Path to JSON configuration file
--   `<PATH>`: Path to API test JSON file (for api-test command)
+### API Endpoints
 
-### Examples
+#### Health Check
+```bash
+GET /api/health
+```
+Response:
+```json
+{
+    "success": true,
+    "message": "API is running"
+}
+```
 
-1. Load test a single URL:
-
-    ```
-    cargo run --release -- load-test --url https://example.com -r 1000 -c 20
-    ```
-
-2. Stress test using a sitemap:
-
-    ```
-    cargo run --release -- stress-test --sitemap path/to/sitemap.xml -d 300 -c 50
-    ```
-
-3. Run API tests:
-
-    ```
-    cargo run --release -- api-test examples/sample_restfulAPI_test.json
-    ```
-
-4. Monitor resource usage:
-    ```
-    cargo run --release -- resource-usage
-    ```
-
-## Configuration
-
-You can use a JSON configuration file to specify test parameters. Create a file named `config.json` with the following structure:
-
+#### Load Testing
+```bash
+POST /api/load-test
+```
+Request body:
 ```json
 {
     "url": "https://example.com",
     "requests": 1000,
-    "concurrency": 20,
-    "duration": 60,
-    "api_test": "path/to/api_tests.json"
+    "concurrency": 20
 }
 ```
 
-Then run the tool with:
-
+#### Stress Testing
+```bash
+POST /api/stress-test
 ```
-cargo run --release -- load-test --config config.json
+Request body:
+```json
+{
+    "sitemap": "https://example.com/sitemap.xml",
+    "duration": 300,
+    "concurrency": 50
+}
 ```
 
-## API Testing
+#### API Testing
+```bash
+POST /api/api-test
+```
+Request body:
+```json
+{
+    "path": "path/to/api_tests.json"
+}
+```
 
-To perform API tests, create a JSON file with test definitions:
+#### Get Test Results
+```bash
+GET /api/tests
+```
+Response:
+```json
+{
+    "success": true,
+    "message": "Test results retrieved",
+    "data": [
+        {
+            "test_type": "Load",
+            "status": "Success",
+            "details": "Load test completed successfully",
+            "timestamp": "2024-03-20T10:30:00Z"
+        }
+    ]
+}
+```
+
+### API Test Definition Format
+
+Create a JSON file with your API test definitions:
 
 ```json
 [
@@ -139,15 +150,28 @@ To perform API tests, create a JSON file with test definitions:
 ]
 ```
 
-Then run the API tests with:
+## Example Usage with curl
 
-```
-cargo run --release -- api-test path/to/api_tests.json
+```bash
+# Health check
+curl http://localhost:3001/api/health
+
+# Run load test
+curl -X POST http://localhost:3001/api/load-test \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "requests": 1000, "concurrency": 20}'
+
+# Get test results
+curl http://localhost:3001/api/tests
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. When contributing, please adhere to the functional programming principles used in this project.
+Contributions are welcome! Please follow these guidelines:
+- Adhere to functional programming principles
+- Write pure functions where possible
+- Include tests for new functionality
+- Update documentation as needed
 
 ## License
 

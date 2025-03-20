@@ -190,6 +190,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "ballista"
+version = "0.3.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "clap",
+ "colored",
+ "dirs",
+ "futures",
+ "http 0.2.12",
+ "indicatif",
+ "mockall",
+ "num_cpus",
+ "prettytable-rs",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sys-info",
+ "sysinfo",
+ "thiserror",
+ "tokio",
+ "tower 0.4.13",
+ "tower-http",
+ "xml-rs",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1692,35 +1721,6 @@ checksum = "a75fb188eb626b924683e3b95e3a48e63551fcfb51949de2f06a9d91dbee93c9"
 dependencies = [
  "core-foundation-sys",
  "libc",
-]
-
-[[package]]
-name = "target-tool"
-version = "0.3.0"
-dependencies = [
- "async-trait",
- "axum",
- "chrono",
- "clap",
- "colored",
- "dirs",
- "futures",
- "http 0.2.12",
- "indicatif",
- "mockall",
- "num_cpus",
- "prettytable-rs",
- "rand",
- "reqwest",
- "serde",
- "serde_json",
- "sys-info",
- "sysinfo",
- "thiserror",
- "tokio",
- "tower 0.4.13",
- "tower-http",
- "xml-rs",
 ]
 
 [[package]]

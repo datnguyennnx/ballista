@@ -57,7 +57,7 @@ pub async fn load_config(path: &str) -> Result<Args, AppError> {
 
 pub fn get_config_path() -> PathBuf {
     dirs::config_dir()
-        .map(|path| path.join("target-tool").join("config.json"))
+        .map(|path| path.join("ballista").join("config.json"))
         .unwrap_or_else(|| PathBuf::from("config.json"))
 }
 
