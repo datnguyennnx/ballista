@@ -5,6 +5,101 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-03-20
+
+### Breaking Changes
+
+- Removed CLI functionality in favor of API-only interface
+- Removed command-line argument parsing and related functionality
+- Removed CLI-specific modules and types:
+  - Removed `args` module
+  - Removed `Command` enum and related types
+  - Removed CLI-specific error handling
+
+### Added
+
+- Implemented new REST API using Axum framework
+- Added CORS support for cross-origin requests
+- Created new API endpoints:
+  - `/api/health` for health checks
+  - `/api/tests` for retrieving test results
+  - `/api/load-test` for running load tests
+  - `/api/stress-test` for running stress tests
+  - `/api/api-test` for running API tests
+- Introduced shared application state management using `AppState`
+- Added test result tracking and history
+- Implemented asynchronous test execution with status updates
+- Added new DTOs for API requests and responses
+- Created pure functions for API response handling
+
+### Changed
+
+- Converted application to API-only service
+- Removed CLI interface and related code:
+  - Removed `convert_command` function
+  - Removed `parse_args` function
+  - Removed `validate_args` function
+  - Removed `run_app` function
+  - Removed `app_flow` function
+- Simplified main.rs to focus solely on API server
+- Updated error handling to focus on API-specific errors
+- Removed CLI-related dependencies
+
+### Improved
+
+- Enhanced modularity by separating API concerns from core functionality
+- Strengthened type safety with proper DTO structures
+- Improved error handling with consistent API responses
+- Enhanced test result tracking and reporting
+- Better adherence to functional programming principles in API layer:
+  - Pure functions for response creation
+  - Immutable state handling
+  - Clear separation of concerns
+  - Function composition for request handling
+- Enhanced error handling in main.rs for server startup
+- Simplified application bootstrap process
+- Reduced code complexity by removing unused CLI logic
+- Simplified codebase by removing dual-mode (CLI/API) complexity
+- Enhanced focus on API functionality
+- Cleaner architecture with single responsibility
+
+### Fixed
+
+- Resolved runtime issues with Tokio async execution
+- Fixed CORS configuration for proper cross-origin support
+- Corrected type mismatches in API handlers
+- Resolved issues with concurrent test execution
+- Fixed state management in async operations
+
+### Technical Debt
+
+- Removed duplicate endpoint definitions
+- Cleaned up unused imports
+- Standardized error handling across API endpoints
+- Improved code organization in server.rs
+- Removed unused functions:
+  - Removed redundant `tool_info` endpoint
+  - Removed duplicate `run_test` handler
+  - Cleaned up unused CLI-related functions
+- Simplified main application flow to focus on API server
+- Removed unused types and structs
+- Removed legacy CLI code from main application entry point
+- Streamlined main.rs to single responsibility (API server)
+- Removed all CLI-related code
+- Simplified application architecture
+- Reduced complexity by focusing on single interface (API)
+- Removed unused CLI-related dependencies
+
+### Migration Guide
+
+Users previously using the CLI interface should now:
+1. Use the REST API endpoints instead
+2. Migrate CLI scripts to API calls
+3. Use the following endpoint mappings:
+   - Load Test: POST /api/load-test
+   - Stress Test: POST /api/stress-test
+   - API Test: POST /api/api-test
+
 ## [0.2.0] - 2024-10-06
 
 ### Fixed
