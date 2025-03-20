@@ -104,16 +104,16 @@ pub fn compose_test_runners<F, G>(
     runner2: G,
 ) -> impl Fn(String, u32, u32) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'static>>
 where
-    F: Fn(&str, u32, u32) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'static>> + Send + Sync + Clone + 'static,
-    G: Fn(&str, u32, u32) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'static>> + Send + Sync + Clone + 'static,
+    F: Fn(String, u32, u32) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'static>> + Send + Sync + Clone + 'static,
+    G: Fn(String, u32, u32) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'static>> + Send + Sync + Clone + 'static,
 {
     move |url_or_sitemap, requests_or_duration, concurrency| {
         let runner1 = runner1.clone();
         let runner2 = runner2.clone();
         let url_or_sitemap_clone = url_or_sitemap.clone();
         Box::pin(async move {
-            runner1(&url_or_sitemap, requests_or_duration, concurrency).await?;
-            runner2(&url_or_sitemap_clone, requests_or_duration, concurrency).await
+            runner1(url_or_sitemap, requests_or_duration, concurrency).await?;
+            runner2(url_or_sitemap_clone, requests_or_duration, concurrency).await
         })
     }
 }
@@ -137,8 +137,8 @@ mod tests {
     #[tokio::test]
     async fn test_compose_test_runners() {
         let composed_runner = compose_test_runners(
-            |url, req, conc| Box::pin(run_load_test(url, req, conc)),
-            |url, dur, conc| Box::pin(run_stress_test(url, dur, conc))
+            |url: String, req, conc| Box::pin(async move { run_load_test(&url, req, conc).await }),
+            |url: String, dur, conc| Box::pin(async move { run_stress_test(&url, dur.into(), conc).await })
         );
         let result = composed_runner("http://example.com".to_string(), 10, 2).await;
         assert!(result.is_ok());

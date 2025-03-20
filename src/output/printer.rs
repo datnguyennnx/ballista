@@ -56,7 +56,6 @@ fn format_summary(summary: &MetricsSummary) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
     #[test]
     fn test_format_test_results() {
@@ -64,9 +63,11 @@ mod tests {
             100,
             Duration::from_secs(10),
             Some(Duration::from_millis(10)),
+            Some(Duration::from_millis(100)),
+            Some(Duration::from_millis(50)),
+            Some(Duration::from_millis(90)),
+            &[200, 200, 404]
         );
-
-
 
         let result = format_test_results(
             Some(&summary),
@@ -74,6 +75,5 @@ mod tests {
         );
 
         assert!(result.contains("Total Requests"));
-
     }
 }

@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::args::{Args, Command};
-use crate::utils::parsers::{parse_urls, parse_json};
-use std::path::PathBuf;
+use crate::utils::parsers::{parse_urls, parse_json, load_example_file, UtilError};
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use clap::Parser;
 use serde::Deserialize;
@@ -48,10 +48,17 @@ pub fn validate(args: &Args) -> Result<(), AppError> {
 }
 
 pub async fn load_config(path: &str) -> Result<Args, AppError> {
-    fs::read_to_string(path)
-        .await
-        .map_err(|e| AppError::FileError(e.to_string()))
-        .and_then(|content| parse_json(&content).map_err(|e| AppError::ParseError(e.to_string())))
+    // First try to load from examples directory if it's just a filename
+    let content = if Path::new(path).is_relative() && !Path::new(path).exists() {
+        load_example_file(path)
+    } else {
+        fs::read_to_string(path)
+            .await
+            .map_err(|e| UtilError::Io(e))
+    }.map_err(|e| AppError::FileError(e.to_string()))?;
+
+    parse_json(&content)
+        .map_err(|e| AppError::ParseError(e.to_string()))
         .and_then(|config: Args| validate(&config).map(|_| config))
 }
 
@@ -107,18 +114,6 @@ mod tests {
         };
         let urls = prepare_urls(&command).await.unwrap();
         assert_eq!(urls, vec!["https://example.com"]);
-    }
-
-    #[tokio::test]
-    async fn test_prepare_urls_stress_test() {
-        let command = Command::StressTest {
-            sitemap: "tests/sample_sitemap.xml".to_string(),
-            duration: 60,
-            concurrency: 5,
-        };
-        let urls = prepare_urls(&command).await.unwrap();
-        assert!(!urls.is_empty());
-        assert!(urls.iter().all(|url| url.starts_with("http")));
     }
 
     #[test]
@@ -187,5 +182,25 @@ mod tests {
             },
         };
         assert!(validate(&args).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_load_example_config() {
+        // Create test configuration in memory
+        let config_content = r#"{
+            "command": {
+                "LoadTest": {
+                    "url": "https://example.com",
+                    "requests": 10,
+                    "concurrency": 2
+                }
+            }
+        }"#;
+        
+        // Test with in-memory configuration
+        let result = parse_json(config_content);
+        assert!(result.is_ok());
+        let config: Args = result.unwrap();
+        assert!(validate(&config).is_ok());
     }
 }

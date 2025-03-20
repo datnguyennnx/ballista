@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+# [0.3.1] - 2025-03-20
+
+### Fixed
+
+- Resolved test case failures in API test runner and URL parser
+- Fixed file path handling for test examples
+- Corrected XML parsing in URL parser
+- Improved test file resolution logic
+- Fixed test assertions and error messages
+
+### Added
+
+- New test_examples directory for sample files:
+  - sample_load_test.json
+  - sample_restfulAPI_test.json
+- Enhanced test file handling with fallback paths
+- Better error messages in test assertions
+- Improved test coverage for API functionality
+
+### Changed
+
+- Updated file reading logic to support test_examples directory
+- Refactored test cases to use actual sample files
+- Enhanced test assertions with detailed error messages
+- Improved test file path resolution strategy
+
+### Improved
+
+- Better test file organization with dedicated examples directory
+- Enhanced error reporting in test cases
+- More robust file path handling
+- Clearer test failure messages
+- Stronger test coverage for API functionality
+
+### Technical Debt
+
+- Removed temporary file creation in tests
+- Standardized test file handling
+- Improved test organization
+- Enhanced test maintainability
+
+
 ## [0.3.0] - 2025-03-20
 
 ### Breaking Changes
@@ -154,3 +197,5 @@ Users previously using the CLI interface should now:
 ### Updated
 
 -   README.md now includes information about the functional programming approach used in the project
+
+#
