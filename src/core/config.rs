@@ -4,6 +4,8 @@ use crate::utils::parsers::{parse_urls, parse_json};
 use std::path::PathBuf;
 use tokio::fs;
 use clap::Parser;
+use serde::Deserialize;
+use std::env;
 
 pub async fn parse_arguments() -> Result<Args, AppError> {
     Args::try_parse().map_err(|e| AppError::ArgValidation(e.to_string()))
@@ -57,6 +59,38 @@ pub fn get_config_path() -> PathBuf {
     dirs::config_dir()
         .map(|path| path.join("target-tool").join("config.json"))
         .unwrap_or_else(|| PathBuf::from("config.json"))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    pub api_port: u16,
+    pub api_host: String,
+    pub cors_allowed_origins: Vec<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            api_port: 3001,
+            api_host: "0.0.0.0".to_string(),
+            cors_allowed_origins: vec!["*".to_string()],
+        }
+    }
+}
+
+impl Config {
+    pub fn from_env() -> Self {
+        Self {
+            api_port: env::var("API_PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(3001),
+            api_host: env::var("API_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
+            cors_allowed_origins: env::var("CORS_ALLOWED_ORIGINS")
+                .map(|s| s.split(',').map(String::from).collect())
+                .unwrap_or_else(|_| vec!["*".to_string()]),
+        }
+    }
 }
 
 #[cfg(test)]

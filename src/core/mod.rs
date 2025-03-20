@@ -1,3 +1,4 @@
+pub mod app;
 pub mod error;
 pub mod config;
 pub mod test_runner;

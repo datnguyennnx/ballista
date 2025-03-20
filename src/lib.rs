@@ -1,14 +1,15 @@
 pub mod api;
-pub mod args;
 pub mod core;
+pub mod utils;
+pub mod args;
 pub mod http;
 pub mod metrics;
 pub mod output;
-pub mod utils;
+
+pub use core::error::AppError;
 
 // Re-export commonly used items
 pub use crate::args::{Args, Command};
-pub use crate::core::error::AppError;
 pub use crate::metrics::collector::{Metrics, new_metrics, add_request, calculate_summary};
 pub use crate::utils::formatters::format_duration;
 
@@ -17,16 +18,13 @@ pub mod prelude {
     pub use super::{Args, Command, AppError};
     pub use super::{Metrics, new_metrics, add_request, calculate_summary};
     pub use super::format_duration;
+    pub use super::core::app::{AppState, TestResult, TestType, TestStatus};
 
     pub use std::result::Result;
     pub use std::future::Future;
     pub use async_trait::async_trait;
     pub use std::sync::Arc;
-    pub use std::sync::atomic::{AtomicBool, Ordering};
     pub use tokio::time::Duration;
-
-    pub use std::option::Option::{self, Some, None};
-    pub use std::result::Result::{Ok, Err};
 }
 
 // Function to compose multiple functions
