@@ -27,6 +27,31 @@ Ballista is built using functional programming principles in Rust:
 
 ## Installation
 
+### Using Devbox (Recommended)
+
+Devbox provides a consistent development environment with all required dependencies.
+
+1. Install Devbox by following the instructions at [https://www.jetify.com/docs/devbox/installing_devbox/](https://www.jetify.com/docs/devbox/installing_devbox/)
+
+2. Clone this repository:
+```bash
+git clone https://github.com/datnguyennnx/ballista.git
+cd ballista
+```
+
+3. Initialize and enter the devbox environment:
+```bash
+devbox init
+devbox shell
+```
+
+4. Build and run the project:
+```bash
+cargo build --release
+```
+
+### Manual Installation
+
 1. Ensure you have Rust and Cargo installed
 2. Clone this repository:
 ```bash
@@ -34,23 +59,45 @@ git clone https://github.com/datnguyennnx/ballista.git
 cd ballista
 ```
 
-3. Build the project:
+3. Install required dependencies (OpenSSL and other libraries)
+
+4. Build the project:
 ```bash
 cargo build --release
 ```
 
-## API Usage
+## Usage
 
 Start the server:
 ```bash
+# With devbox
+devbox shell
+cargo run --release
+
+# Without devbox
 cargo run --release
 ```
 
 The server will start on `http://localhost:3001`
 
-### API Endpoints
+### Development Scripts
 
-#### Health Check
+When using devbox, you can use these predefined scripts:
+
+```bash
+# Run tests
+devbox run test
+
+# Start the application
+devbox run start
+
+# Build documentation
+devbox run build-docs
+```
+
+## API Endpoints
+
+### Health Check
 ```bash
 GET /api/health
 ```
@@ -62,7 +109,7 @@ Response:
 }
 ```
 
-#### Load Testing
+### Load Testing
 ```bash
 POST /api/load-test
 ```
@@ -75,7 +122,7 @@ Request body:
 }
 ```
 
-#### Stress Testing
+### Stress Testing
 ```bash
 POST /api/stress-test
 ```
@@ -88,7 +135,7 @@ Request body:
 }
 ```
 
-#### API Testing
+### API Testing
 ```bash
 POST /api/api-test
 ```
@@ -99,7 +146,7 @@ Request body:
 }
 ```
 
-#### Get Test Results
+### Get Test Results
 ```bash
 GET /api/tests
 ```
@@ -119,7 +166,7 @@ Response:
 }
 ```
 
-### API Test Definition Format
+## API Test Definition Format
 
 Create a JSON file with your API test definitions:
 
