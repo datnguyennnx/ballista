@@ -1,5 +1,13 @@
-# Ballista
+<p align="center">
+  <img src="./assets/img/logo.png" width="200px" align="center" style="border-radius: 8px;" />
+  <h1 align="center">Ballista</h1>
+  <p align="center">
+    <br/>
 Ballista - An ancient precision weapon, suggesting targeted and powerful testing
+  </p>
+</p>
+
+# Ballista
 
 Ballista is a modern Rust-based RESTful API service for performing load testing, stress testing, and API testing. Built with Axum and following functional programming principles, it provides a robust HTTP interface for testing web applications and APIs.
 
