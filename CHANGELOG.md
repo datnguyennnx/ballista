@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.2] - 2025-03-21
+
+### Fixed
+- Fixed type mismatches in test router imports
+- Corrected WebSocket message handling with proper types
+- Fixed field naming consistency (test_id -> id)
+- Resolved compilation errors in test handlers
+
+### Added
+- Enhanced test metrics structure with detailed statistics:
+  - Added min/max response times
+  - Added median and p95 response times
+  - Added status code tracking
+  - Added total requests counter
+- Implemented proper enum types for test status and types
+- Added timestamp tracking for all test updates
+- Added structured error handling in test updates
+
+### Improved
+- Standardized test configuration types across the application
+- Enhanced WebSocket message handling with type safety
+- Improved error handling in test execution
+- Better metrics collection and reporting
+- Cleaner type definitions and interfaces
+
+### Technical Debt
+- Removed redundant test response types
+- Standardized metric field types (f32 -> f64)
+- Cleaned up unused imports
+- Improved code organization in test router
+
 # [0.3.1] - 2025-03-20
 
 ### Fixed
@@ -198,4 +229,3 @@ Users previously using the CLI interface should now:
 
 -   README.md now includes information about the functional programming approach used in the project
 
-#

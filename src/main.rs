@@ -1,15 +1,10 @@
 use tokio::net::TcpListener;
-use ballista::api::server::create_api_server;
-use ballista::core::app::AppState;
-use std::sync::Arc;
+mod router;
 
 #[tokio::main]
 async fn main() {
-    // Initialize shared application state
-    let app_state = Arc::new(AppState::new());
-    
-    // Create and run API server
-    let app = create_api_server(app_state).await;
+    // Create router with WebSocket channel
+    let (app, _tx) = router::create_router_config();
     
     // Bind to port 3001
     match TcpListener::bind("0.0.0.0:3001").await {
