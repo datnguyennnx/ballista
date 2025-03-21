@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-03-25
+
+### Breaking Changes
+- Completely refactored project structure to follow MVC architecture pattern
+- Reorganized code into model, view, and controller components
+- Moved type definitions into model directory
+- Restructured HTTP handling into controller layer
+
+### Added
+- New folder structure with dedicated directories:
+  - `model/`: All data structures and business logic
+  - `controller/`: Request handling and business logic coordination
+  - `http/`: HTTP client and server implementations
+  - `view/`: Response formatting and presentation logic
+- Improved separation of concerns with clear component boundaries
+- Enhanced testability with better component isolation
+- Stronger type safety with centralized type definitions
+
+### Changed
+- Moved test types from custom types module to model/test module
+- Refactored request/response handling into the controller layer
+- Enhanced metrics collection with improved data structures
+- Updated HTTP client with better error handling
+- Improved WebSocket handling for real-time test updates
+
+### Improved
+- Better code organization with clear architectural boundaries
+- Enhanced maintainability through separation of concerns
+- Improved testability with isolated components
+- Clearer responsibility allocation across modules
+- Stronger adherence to functional programming principles within MVC structure
+
+### Fixed
+- Resolved import conflicts with clearer module boundaries
+- Fixed naming inconsistencies across the codebase
+- Corrected type mismatches through centralized type definitions
+- Improved error handling with clear error propagation paths
 
 ## [0.3.2] - 2025-03-21
 

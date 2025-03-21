@@ -1,31 +1,23 @@
-use reqwest::Client;
-use tokio::time::Instant;
-use std::sync::Arc;
-use serde_json::Value;
+// This file is kept for backward compatibility
+// Future code should use the functions from http/client.rs directly
 
-#[derive(Debug)]
-pub struct RequestResult {
-    pub duration: std::time::Duration,
-    pub status: u16,
-    pub json: Option<Value>,
-}
+pub use crate::model::test::RequestResult;
 
+// Legacy TestConfig struct kept for backward compatibility
 #[derive(Clone)]
-pub struct TestConfig {
-    pub urls: Arc<Vec<String>>,
+pub struct LegacyTestConfig {
+    pub urls: Vec<String>,
     pub concurrency: u32,
     pub total_requests: Option<u32>,
     pub duration: Option<u64>,
 }
 
-pub async fn send_request(client: &Client, url: &str) -> Result<RequestResult, reqwest::Error> {
-    let start = Instant::now();
-    let response = client.get(url).send().await?;
-    let status = response.status().as_u16();
-    let json = response.json::<Value>().await.ok();
-    Ok(RequestResult {
-        duration: start.elapsed(),
-        status,
-        json,
-    })
+// Conversion function from legacy to new config
+pub fn convert_legacy_config(config: &LegacyTestConfig) -> crate::model::test::TestConfig {
+    crate::model::test::TestConfig {
+        urls: config.urls.clone(),
+        concurrency: config.concurrency,
+        total_requests: config.total_requests,
+        duration: config.duration,
+    }
 }

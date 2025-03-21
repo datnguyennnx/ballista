@@ -1,32 +1,35 @@
-pub mod api;
-pub mod core;
-pub mod utils;
-pub mod args;
+pub mod model;
+pub mod view;
+pub mod controller;
 pub mod http;
-pub mod metrics;
-pub mod output;
 
-pub use core::error::AppError;
-
-// Re-export commonly used items
-pub use crate::args::{Args, Command};
-pub use crate::metrics::collector::{Metrics, new_metrics, add_request, calculate_summary};
-pub use crate::utils::formatters::format_duration;
+// Import the error types from model
+pub use model::error::AppError;
 
 // Create a prelude module for commonly used items
 pub mod prelude {
-    pub use super::{Args, Command, AppError};
-    pub use super::{Metrics, new_metrics, add_request, calculate_summary};
-    pub use super::format_duration;
-    pub use super::core::app::{AppState, TestResult, TestType, TestStatus};
-
+    // Re-export from model
+    pub use super::model::error::AppError;
+    pub use super::model::test::{
+        TestConfig, TestResult, TestStatus, TestType, TestMetrics, TestUpdate, ApiTest
+    };
+    pub use super::model::metrics::{Metrics, new_metrics, add_request, calculate_summary};
+    pub use super::model::utils::formatters::format_duration;
+    
+    // Re-export from view
+    pub use super::view::response::{ApiResponse, create_api_response};
+    
+    // Common imports
     pub use std::result::Result;
     pub use std::future::Future;
     pub use async_trait::async_trait;
     pub use std::sync::Arc;
     pub use tokio::time::Duration;
+    pub use serde::{Serialize, Deserialize};
+    pub use serde_json::{self, Value, json};
 }
 
+// Functional programming utilities
 // Function to compose multiple functions
 pub fn compose<A, B, C, F, G>(f: F, g: G) -> impl Fn(A) -> C
 where

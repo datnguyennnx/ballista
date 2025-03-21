@@ -1,10 +1,9 @@
 use tokio::net::TcpListener;
-mod router;
 
 #[tokio::main]
 async fn main() {
-    // Create router with WebSocket channel
-    let (app, _tx) = router::create_router_config();
+    // Create router with all routes
+    let (app, _state) = ballista::controller::create_router();
     
     // Bind to port 3001
     match TcpListener::bind("0.0.0.0:3001").await {

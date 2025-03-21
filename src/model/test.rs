@@ -5,6 +5,20 @@ use serde_json::Value;
 
 // Test Configurations
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestConfig {
+    #[serde(default)]
+    pub urls: Vec<String>,
+    #[serde(default = "default_concurrency")]
+    pub concurrency: u32,
+    pub total_requests: Option<u32>,
+    pub duration: Option<u64>,
+}
+
+fn default_concurrency() -> u32 {
+    10
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadTestConfig {
     pub target_url: String,
     pub num_requests: u32,
@@ -86,23 +100,16 @@ pub struct ApiTest {
     pub expected_body: Option<Value>,
 }
 
-// Error Types
-#[derive(Debug, thiserror::Error)]
-pub enum TestError {
-    #[error("Invalid test configuration: {0}")]
-    InvalidConfig(String),
-    
-    #[error("Test execution failed: {0}")]
-    ExecutionError(String),
-    
-    #[error("Network error: {0}")]
-    NetworkError(#[from] reqwest::Error),
-    
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
+// Request and Response Types
+#[derive(Debug, Clone)]
+pub struct RequestResult {
+    pub duration: Duration,
+    pub status: u16,
+    pub json: Option<Value>,
+    pub error: Option<String>,
 }
 
-// Helper functions for creating test results and updates
+// Pure functions for creating test entities
 pub fn create_test_result(
     id: String,
     test_type: TestType,
@@ -180,4 +187,23 @@ fn get_percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
         .saturating_sub(1)
         .min(sorted_values.len() - 1);
     Some(sorted_values[index])
+}
+
+// Helper functions for test configuration
+pub fn create_test_config_from_load(config: &LoadTestConfig) -> TestConfig {
+    TestConfig {
+        urls: vec![config.target_url.clone()],
+        concurrency: config.concurrency,
+        total_requests: Some(config.num_requests),
+        duration: None,
+    }
+}
+
+pub fn create_test_config_from_stress(config: &StressTestConfig) -> TestConfig {
+    TestConfig {
+        urls: vec![config.target_url.clone()],
+        concurrency: config.concurrency,
+        total_requests: None,
+        duration: Some(config.duration_secs),
+    }
 } 
