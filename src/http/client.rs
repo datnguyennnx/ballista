@@ -9,6 +9,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::model::error::AppError;
 use crate::model::test::{ApiTest, RequestResult, TestConfig, TestMetrics};
+// use crate::middleware::{log_outgoing_request, log_outgoing_response};
 
 /// Convert a string to reqwest Method
 pub fn string_to_method(method: &str) -> Result<Method, AppError> {
@@ -26,12 +27,18 @@ pub fn string_to_method(method: &str) -> Result<Method, AppError> {
 
 /// Send a simple HTTP request and return the result
 pub async fn send_request(client: &Client, url: &str) -> Result<RequestResult, AppError> {
+    // Log the outgoing request
+    let request_id = log_outgoing_request("GET", url);
+    
     let start = Instant::now();
     
     match client.get(url).send().await {
         Ok(response) => {
             let status = response.status();
             let duration = start.elapsed();
+            
+            // Log the response
+            log_outgoing_response(request_id, url, status.as_u16(), duration.as_millis());
             
             let json = if status.is_success() {
                 match response.json::<serde_json::Value>().await {
@@ -49,12 +56,19 @@ pub async fn send_request(client: &Client, url: &str) -> Result<RequestResult, A
                 error: None,
             })
         },
-        Err(e) => Err(AppError::NetworkError(e)),
+        Err(e) => {
+            // Log the error
+            log_outgoing_response(request_id, url, 0, start.elapsed().as_millis());
+            Err(AppError::NetworkError(e))
+        }
     }
 }
 
 /// Send an API request based on an ApiTest specification
 pub async fn send_api_request(client: &Client, api_test: &ApiTest) -> Result<RequestResult, AppError> {
+    // Log the outgoing request
+    let request_id = log_outgoing_request(&api_test.method, &api_test.url);
+    
     let start = Instant::now();
     let method = string_to_method(&api_test.method)?;
 
@@ -78,6 +92,9 @@ pub async fn send_api_request(client: &Client, api_test: &ApiTest) -> Result<Req
             let status = response.status();
             let duration = start.elapsed();
             
+            // Log the response
+            log_outgoing_response(request_id, &api_test.url, status.as_u16(), duration.as_millis());
+            
             // Try to parse JSON response if successful
             let json = if status.is_success() {
                 match response.json::<serde_json::Value>().await {
@@ -95,7 +112,11 @@ pub async fn send_api_request(client: &Client, api_test: &ApiTest) -> Result<Req
                 error: None,
             })
         },
-        Err(e) => Err(AppError::NetworkError(e)),
+        Err(e) => {
+            // Log the error
+            log_outgoing_response(request_id, &api_test.url, 0, start.elapsed().as_millis());
+            Err(AppError::NetworkError(e))
+        }
     }
 }
 

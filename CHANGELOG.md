@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-03-25
+## [0.4.1] - 2025-03-21
+
+### Added
+- New configuration module following functional programming principles
+- Environment-based configuration system with typed config structures
+- Improved logging format with MM/DD/YYYY HH:MM timestamps
+- Enhanced error handling for configuration variables
+
+### Changed
+- Refactored middleware implementation to use tower_http CORS layer
+- Updated logging middleware with more human-readable format
+- Replaced hard-coded environment values with configuration module
+- Improved middleware application order for better compatibility
+
+### Fixed
+- Resolved CORS middleware compatibility issues with Axum 0.7
+- Fixed type mismatches in configuration number parsing
+- Corrected middleware application order for proper request handling
+- Fixed duplicate variable name in logging middleware
+
+### Improved
+- Enhanced log readability with formatted timestamps and emoji indicators
+- Better request/response logging with clear visual indicators
+- Simplified server configuration using the functional config module
+- More consistent module exports and imports
+
+## [0.4.0] - 2025-03-21
 
 ### Breaking Changes
 - Completely refactored project structure to follow MVC architecture pattern

@@ -1,24 +1,43 @@
+use std::net::SocketAddr;
+use tracing::info;
 use tokio::net::TcpListener;
+
+use ballista::model::config;
+use ballista::controller::router::create_router;
+use ballista::middleware::{
+    log_request, 
+    create_cors_layer,
+    init_logging,
+};
 
 #[tokio::main]
 async fn main() {
-    // Create router with all routes
-    let (app, _state) = ballista::controller::create_router();
+    // Load configuration
+    let app_config = config::load_config();
     
-    // Bind to port 3001
-    match TcpListener::bind("0.0.0.0:3001").await {
-        Ok(listener) => {
-            println!("API server listening on http://localhost:3001");
-            
-            // Run the server
-            if let Err(e) = axum::serve(listener, app).await {
-                eprintln!("Server error: {}", e);
-                std::process::exit(1);
-            }
-        },
-        Err(e) => {
-            eprintln!("Failed to bind to port 3001: {}", e);
-            std::process::exit(1);
-        }
-    }
+    // Initialize logging with improved format
+    init_logging(&app_config.server.log_level);
+
+    // Create the application router
+    let (router, _state) = create_router();
+
+    // Set up CORS from environment configuration
+    let cors = create_cors_layer();
+    
+    // Apply middleware in the correct order
+    let app = router
+        // Apply CORS directly to the router
+        .layer(cors)
+        // Apply request logging middleware
+        .layer(axum::middleware::from_fn(log_request));
+
+    // Get the server address from configuration
+    let addr: SocketAddr = format!("{}:{}", app_config.server.host, app_config.server.port)
+        .parse()
+        .unwrap();
+
+    // Start the server with a more informative message
+    info!("🚀 Server starting on http://{}", addr);
+    let listener = TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }

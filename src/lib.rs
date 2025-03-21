@@ -2,6 +2,7 @@ pub mod model;
 pub mod view;
 pub mod controller;
 pub mod http;
+pub mod middleware;
 
 // Import the error types from model
 pub use model::error::AppError;
@@ -18,6 +19,9 @@ pub mod prelude {
     
     // Re-export from view
     pub use super::view::response::{ApiResponse, create_api_response};
+    
+    // Re-export from middleware
+    pub use super::middleware::{log_request};
     
     // Common imports
     pub use std::result::Result;
