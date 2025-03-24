@@ -9,7 +9,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::model::error::AppError;
 use crate::model::test::{ApiTest, RequestResult, TestConfig, TestMetrics};
-// use crate::middleware::{log_outgoing_request, log_outgoing_response};
+use crate::middleware::{log_outgoing_request};
 
 /// Convert a string to reqwest Method
 pub fn string_to_method(method: &str) -> Result<Method, AppError> {
@@ -36,10 +36,7 @@ pub async fn send_request(client: &Client, url: &str) -> Result<RequestResult, A
         Ok(response) => {
             let status = response.status();
             let duration = start.elapsed();
-            
-            // Log the response
-            log_outgoing_response(request_id, url, status.as_u16(), duration.as_millis());
-            
+                        
             let json = if status.is_success() {
                 match response.json::<serde_json::Value>().await {
                     Ok(json) => Some(json),
@@ -57,8 +54,6 @@ pub async fn send_request(client: &Client, url: &str) -> Result<RequestResult, A
             })
         },
         Err(e) => {
-            // Log the error
-            log_outgoing_response(request_id, url, 0, start.elapsed().as_millis());
             Err(AppError::NetworkError(e))
         }
     }
@@ -92,9 +87,6 @@ pub async fn send_api_request(client: &Client, api_test: &ApiTest) -> Result<Req
             let status = response.status();
             let duration = start.elapsed();
             
-            // Log the response
-            log_outgoing_response(request_id, &api_test.url, status.as_u16(), duration.as_millis());
-            
             // Try to parse JSON response if successful
             let json = if status.is_success() {
                 match response.json::<serde_json::Value>().await {
@@ -113,8 +105,6 @@ pub async fn send_api_request(client: &Client, api_test: &ApiTest) -> Result<Req
             })
         },
         Err(e) => {
-            // Log the error
-            log_outgoing_response(request_id, &api_test.url, 0, start.elapsed().as_millis());
             Err(AppError::NetworkError(e))
         }
     }
