@@ -71,6 +71,9 @@ pub async fn start_load_test(
     );
     let _ = state.send_test_update(initial_update).await;
     
+    // Reset time series tracker for the new test
+    state.reset_time_series();
+    
     // Run the test in the background
     tokio::spawn({
         let state = Arc::clone(&state);
@@ -129,6 +132,9 @@ pub async fn start_load_test(
                         status_codes.clone(),
                         errors,
                     );
+                    
+                    // Update time series and send real-time data
+                    let _ = state.update_time_series(&metrics).await;
                     
                     // Send update
                     let update = create_test_update(
@@ -231,6 +237,9 @@ pub async fn start_stress_test(
     );
     let _ = state.send_test_update(initial_update).await;
     
+    // Reset time series tracker for the new test
+    state.reset_time_series();
+    
     // Run the test in the background
     tokio::spawn({
         let state = Arc::clone(&state);
@@ -307,6 +316,9 @@ pub async fn start_stress_test(
                     status_codes.clone(),
                     errors,
                 );
+                
+                // Update time series and send real-time data
+                let _ = state.update_time_series(&metrics).await;
                 
                 // Send update
                 let update = create_test_update(

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::model::state::AppState;
 use crate::controller::health::health_check;
 use crate::controller::test::{get_all_test_results, start_load_test, start_stress_test, start_api_test};
-use crate::controller::websocket::ws_handler;
+use crate::controller::websocket::websocket_handler;
 
 /// Create a new router with all routes
 pub fn create_router() -> (Router, Arc<AppState>) {
@@ -27,7 +27,7 @@ pub fn create_router() -> (Router, Arc<AppState>) {
         .route("/api/api-test", post(start_api_test))
         
         // WebSocket endpoint
-        .route("/ws", get(ws_handler))
+        .route("/ws", get(websocket_handler))
         
         // Add state to router
         .with_state(Arc::clone(&state));

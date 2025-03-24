@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use tracing::info;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
+use http::header::{CONTENT_TYPE, AUTHORIZATION, HeaderName};
 
 use ballista::model::config;
 use ballista::controller::router::create_router;
@@ -23,13 +24,7 @@ async fn main() {
     let (router, _state) = create_router();
 
     // Configure CORS
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any)
-        .expose_headers(["Content-Type", "Authorization"])
-        .allow_credentials(true)
-        .max_age(std::time::Duration::from_secs(86400));
+    let cors = create_cors_layer();
 
     // Apply middleware in the correct order
     let app = router
