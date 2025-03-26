@@ -16,7 +16,7 @@ pub enum AppError {
     SerializationError(#[from] serde_json::Error),
     
     #[error("HTTP error: status {0}")]
-    HttpError(u16),
+    HttpError(u16), // For specific HTTP status errors if needed elsewhere
     
     #[error("No URLs provided for the test")]
     NoUrls,
@@ -26,4 +26,7 @@ pub enum AppError {
     
     #[error("Test already running")]
     TestAlreadyRunning,
-} 
+
+    #[error("Test execution failed: {0}")] // New variant
+    TestExecutionError(String),
+}

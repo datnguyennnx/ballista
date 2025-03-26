@@ -1,10 +1,10 @@
 use std::net::SocketAddr;
 use tracing::info;
 use tokio::net::TcpListener;
-use tower_http::cors::{Any, CorsLayer};
-use http::header::{CONTENT_TYPE, AUTHORIZATION, HeaderName};
+use std::sync::Arc;
 
 use ballista::model::config;
+use ballista::model::state::AppState;
 use ballista::controller::router::create_router;
 use ballista::middleware::{
     log_request, 
@@ -20,8 +20,12 @@ async fn main() {
     // Initialize logging with improved format
     init_logging(&app_config.server.log_level);
 
+    // Create application state
+    let (state, _tx) = AppState::new();
+    let state = Arc::new(state);
+
     // Create the application router
-    let (router, _state) = create_router();
+    let router = create_router(Arc::clone(&state));
 
     // Configure CORS
     let cors = create_cors_layer();

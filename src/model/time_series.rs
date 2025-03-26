@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::model::test::TestMetrics;
 
@@ -9,10 +9,9 @@ use crate::model::test::TestMetrics;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeSeriesPoint {
     pub timestamp: i64,
-    pub responseTime: f64,
-    pub requestsPerSecond: f64,
-    pub errorRate: f64,
-    pub concurrentUsers: Option<f64>,
+    pub requests_per_second: f64,
+    pub average_response_time: f64,
+    pub error_rate: f64,
 }
 
 impl TimeSeriesPoint {
@@ -35,83 +34,57 @@ impl TimeSeriesPoint {
             }
         };
 
-        // Calculate error rate (errors / total requests)
-        let error_rate = if metrics.requests_completed > 0 {
-            (metrics.errors as f64 / metrics.requests_completed as f64) * 100.0
-        } else {
-            0.0
-        };
-
-        // Calculate concurrent users (simulation based on current throughput)
-        // This is a simple estimation - in a real system you might want to track actual concurrent users
-        let concurrent_users = Some(rps * 2.5);
-
         Self {
             timestamp: Utc::now().timestamp_millis(),
-            responseTime: metrics.avg_response_time,
-            requestsPerSecond: rps,
-            errorRate: error_rate,
-            concurrentUsers: concurrent_users,
+            requests_per_second: rps,
+            average_response_time: metrics.average_response_time,
+            error_rate: metrics.error_rate,
         }
     }
 }
 
 /// Helper struct to track and generate time series data
 pub struct TimeSeriesTracker {
-    pub points: Vec<TimeSeriesPoint>,
-    pub last_metrics: Option<TestMetrics>,
-    pub last_update_time: std::time::Instant,
-    pub test_start_time: std::time::Instant,
+    points: Arc<Mutex<Vec<TimeSeriesPoint>>>,
+    last_metrics: Arc<Mutex<Option<TestMetrics>>>,
+    start_time: Arc<Mutex<chrono::DateTime<Utc>>>,
 }
 
 impl TimeSeriesTracker {
     /// Create a new time series tracker
     pub fn new() -> Self {
         Self {
-            points: Vec::new(),
-            last_metrics: None,
-            last_update_time: std::time::Instant::now(),
-            test_start_time: std::time::Instant::now(),
+            points: Arc::new(Mutex::new(Vec::new())),
+            last_metrics: Arc::new(Mutex::new(None)),
+            start_time: Arc::new(Mutex::new(Utc::now())),
         }
     }
 
     /// Add a new data point from current metrics
-    pub fn add_point(&mut self, metrics: &TestMetrics) {
-        let now = std::time::Instant::now();
-        let elapsed_since_last = now.duration_since(self.last_update_time).as_secs_f64();
-        let _elapsed_total = now.duration_since(self.test_start_time).as_secs_f64();
+    pub async fn add_point(&self, metrics: &TestMetrics) {
+        let start_time = *self.start_time.lock().await;
+        let elapsed = (Utc::now() - start_time).num_seconds() as f64;
         
-        let point = TimeSeriesPoint::from_metrics(
-            metrics, 
-            self.last_metrics.as_ref(),
-            elapsed_since_last,
-        );
+        let prev_metrics = self.last_metrics.lock().await.take();
+        let point = TimeSeriesPoint::from_metrics(metrics, prev_metrics.as_ref(), elapsed);
         
-        self.points.push(point);
-        self.last_metrics = Some(metrics.clone());
-        self.last_update_time = now;
+        let mut points = self.points.lock().await;
+        points.push(point);
         
-        // Keep only the last 100 points to avoid excessive memory usage
-        if self.points.len() > 100 {
-            self.points.remove(0);
-        }
+        *self.last_metrics.lock().await = Some(metrics.clone());
     }
     
     /// Get all time series points
-    pub fn get_points(&self) -> Vec<TimeSeriesPoint> {
-        self.points.clone()
-    }
-    
-    /// Get the latest time series point
-    pub fn get_latest_point(&self) -> Option<TimeSeriesPoint> {
-        self.points.last().cloned()
+    pub async fn get_points(&self) -> Vec<TimeSeriesPoint> {
+        let points = self.points.lock().await;
+        points.clone()
     }
     
     /// Reset the tracker for a new test
-    pub fn reset(&mut self) {
-        self.points.clear();
-        self.last_metrics = None;
-        self.last_update_time = std::time::Instant::now();
-        self.test_start_time = std::time::Instant::now();
+    pub async fn reset(&self) {
+        let mut points = self.points.lock().await;
+        points.clear();
+        *self.last_metrics.lock().await = None;
+        *self.start_time.lock().await = Utc::now();
     }
 } 

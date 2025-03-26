@@ -1,4 +1,4 @@
-use tracing::{debug, error, info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 /// Log outgoing HTTP requests made by the client

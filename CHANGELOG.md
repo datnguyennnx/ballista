@@ -5,6 +5,194 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2025-03-26
+
+### Frontend Changes
+- Enhanced WebSocket client reliability:
+  - Improved error handling with silent error recovery
+  - Removed console error logging for better UX
+  - Enhanced connection state management
+  - Improved reconnection logic
+- Enhanced metrics visualization:
+  - Added NumberTicker component for animated metrics
+  - Improved MetricCard component with React Node support
+  - Enhanced real-time updates for all numeric values
+  - Added smooth animations for metric changes
+
+### Backend Changes
+- Improved WebSocket server stability:
+  - Enhanced error handling in test controllers
+  - Improved connection management
+  - Better handling of disconnections
+  - Enhanced message queue processing
+
+### Technical Improvements
+- Better type safety in frontend components
+- Enhanced error handling across the application
+- Improved user experience with animated metrics
+- Better state management in WebSocket connections
+
+### Fixed
+- Resolved WebSocket connection stability issues
+- Fixed type mismatches in MetricCard components
+- Corrected NumberTicker integration
+- Improved error handling in WebSocket client
+
+## [0.4.5] - 2025-03-26
+
+### Frontend Changes
+- Enhanced real-time metrics visualization with new chart components:
+  - Implemented responsive area charts for metrics display
+  - Added support for dynamic thresholds and warning indicators
+  - Introduced live status indicators for connection state
+  - Added min/max/avg statistics display
+- Improved dashboard layout and organization:
+  - Created tabbed interface for different metric views
+  - Added fullscreen mode for detailed analysis
+  - Implemented grid layout for better space utilization
+  - Enhanced mobile responsiveness
+- Enhanced data handling and types:
+  - Added proper TypeScript interfaces for metrics data
+  - Implemented time series data processing
+  - Added concurrent users calculation
+  - Improved data formatting and display
+- Added visual feedback features:
+  - Status indicators for test progress
+  - Connection state visualization
+  - Warning and critical thresholds
+  - Real-time data point highlighting
+- Implemented theme support:
+  - Added CSS variables for chart colors
+  - Created consistent color scheme across components
+  - Enhanced dark/light mode compatibility
+
+### Backend Changes
+- Refactored WebSocket handling for better real-time updates:
+  - Improved connection management
+  - Enhanced error handling
+  - Added support for time series data streaming
+- Enhanced test metrics collection:
+  - Added detailed statistics tracking
+  - Improved concurrent user calculation
+  - Enhanced error rate monitoring
+  - Added response time analysis
+- Improved data structures and types:
+  - Added TimeSeriesPoint interface
+  - Enhanced test metrics types
+  - Improved error handling types
+  - Added proper status enums
+
+### Technical Improvements
+- Enhanced type safety across the application
+- Improved error handling and reporting
+- Better separation of concerns in components
+- Enhanced code reusability
+- Improved performance in real-time updates
+- Better state management in frontend
+- Enhanced WebSocket communication
+- Improved data flow consistency
+
+### Fixed
+- Resolved chart rendering issues
+- Fixed data type mismatches between frontend and backend
+- Corrected WebSocket connection handling
+- Fixed metrics calculation accuracy
+- Resolved theme inconsistencies
+- Fixed fullscreen mode behavior
+- Corrected time series data processing
+
+## [0.4.4] - 2025-03-26
+
+### Changed
+- Refactored API test controller (`api_test_controller.rs`) for concurrency using `futures::stream` (`buffer_unordered`, `fold`) and incremental metric updates via `TestContext`.
+- Refactored Load and Stress test controllers (`load_test_controller.rs`, `stress_test_controller.rs`) to use `mpsc` channels and dedicated aggregator tasks for metric collection, removing the `Arc<Mutex<TestMetrics>>` bottleneck.
+- Modified `http::client` functions (`load_test`, `stress_test`, `perform_test`) to support channel-based result passing.
+- Changed `send_request` and `send_api_request` in `http::client` to return `anyhow::Result` for consistent error handling.
+
+### Added
+- Implemented dedicated aggregator tasks in Load and Stress test controllers for incremental metric calculation and periodic updates via `TestContext`.
+- Added `AppError::TestExecutionError(String)` variant for more descriptive test execution failures.
+- Added `Default` implementation for `TestMetrics`.
+- Added `test_id()` method to `TestContext` for better logging context.
+
+### Fixed
+- Resolved numerous compilation errors related to:
+    - Incorrect imports and re-exports (`ApiTest` vs `ApiTestRequest`, `RequestResult`, `ApiRequestResult`).
+    - Missing `anyhow` dependency and usage.
+    - Type mismatches and trait bounds (`Default`, `Sized`).
+    - Lifetime errors in stream combinators (`take_while`).
+    - Syntax errors in pattern matching.
+- Corrected error formatting for `anyhow::Error` when sending updates via `TestContext`.
+- Ensured correct usage of `ApiTest` struct from `model::test::api_test`.
+
+### Improved
+- Significantly improved concurrency in test execution, especially removing mutex contention in Load/Stress tests.
+- Enhanced error handling consistency using `anyhow` and specific `AppError` variants.
+- Streamlined integration between asynchronous test execution logic and `TestContext` updates.
+- Code clarity through iterative fixing of compiler errors and warnings.
+
+### Technical Debt
+- Removed unused function `process_client_message` from `websocket.rs`.
+- Removed various unused imports (`AtomicUsize`, `Ordering`, `timeout`, `debug`, `error`, etc.) across refactored files.
+
+## [0.4.3] - 2025-03-25
+
+### Fixed
+- Fixed duplicate ApiTest definitions and imports in test.rs
+- Resolved moved value issues in test_common.rs by properly cloning metrics
+- Fixed type mismatch in api_test_controller.rs by using correct ApiTest type
+- Added missing Pending variant to TestStatus match in formatter.rs
+- Fixed Send trait issues in load and stress test controllers
+- Corrected AppState initialization in main.rs to properly handle returned tuple
+- Fixed json macro and StreamExt trait imports in websocket.rs
+
+### Improved
+- Enhanced code organization by removing redundant imports
+- Better type safety with proper error type bounds (Box<dyn Error + Send + Sync>)
+- Improved state management in test controllers
+- Enhanced WebSocket message handling with proper imports
+- Cleaner code structure with removal of unused imports
+
+### Technical Debt
+- Removed unused imports across multiple files:
+  - Removed unused HashMap, chrono, and TimeSeriesPoint imports in state.rs
+  - Removed unused Duration and Receiver imports in websocket.rs
+  - Removed unused Error imports in load_test_controller.rs and stress_test_controller.rs
+  - Cleaned up redundant ApiTest imports
+
+## [0.4.2] - 2025-03-25
+
+### Fixed
+- Resolved type mismatches in test controllers and WebSocket handling
+- Fixed opaque type issues in test context responses
+- Corrected module visibility for api_test module
+- Fixed WebSocket receiver handling in connection management
+- Resolved legacy config conversion issues
+- Fixed router return value in create_router function
+- Corrected ApiTest type usage in API test controller
+- Fixed test configuration structure mismatches
+
+### Changed
+- Updated test context to use concrete Response type instead of opaque type
+- Improved WebSocket connection handling with proper channel types
+- Enhanced legacy config conversion to match new TestConfig structure
+- Refactored test controllers to use correct type imports
+- Improved error handling in WebSocket message processing
+
+### Improved
+- Enhanced type safety across test-related modules
+- Better WebSocket connection management
+- Cleaner module organization with proper visibility
+- More consistent error handling in test controllers
+- Improved backward compatibility with legacy configs
+
+### Technical Debt
+- Removed unused imports across multiple files
+- Cleaned up redundant type definitions
+- Standardized test configuration handling
+- Improved code organization in test modules
+- Enhanced type safety in WebSocket handling
+
 ## [0.4.1] - 2025-03-21
 
 ### Added
@@ -244,51 +432,4 @@ Users previously using the CLI interface should now:
 
 -   Resolved type mismatch issues in `src/main.rs` between different `Args` and `Command` types
 -   Implemented a `convert_command` function in `src/main.rs` to handle differences between `core::config::Command` and `args::Command`
--   Updated the `parse_args` function in `src/main.rs` to use the new conversion function
--   Fixed compilation errors related to mismatched `Args` types
--   Resolved runtime panic issue in `src/core/api_test_runner.rs` caused by nested runtime creation
--   Fixed type mismatch errors in the `run_api_tests` function
-
-### Changed
-
--   Refactored `src/main.rs` to use consistent `Args` and `Command` types throughout the file
--   Updated error handling in `src/main.rs` to use the `AppError` type consistently
--   Refactored `run_api_tests` function in `src/core/api_test_runner.rs` to properly handle async operations
--   Simplified the async flow in `run_api_tests` to ensure correct handling of futures
-
-### Improved
-
--   Enhanced code modularity and type safety in the main application flow
--   Improved error handling and type consistency across the codebase
--   Enhanced error handling in the API test runner
--   Improved adherence to functional programming principles in `src/core/api_test_runner.rs`
-
-### Added
-
--   Implemented functional programming principles throughout the codebase
--   Added new pure functions for core logic in various modules
--   Introduced higher-order functions and function composition in key areas
-
-### Changed
-
--   Refactored the entire codebase to follow functional programming paradigms
--   Updated `src/metrics/collector.rs` to use immutable data structures
--   Refactored `src/http/client.rs` to use pure functions instead of methods
--   Modified `src/monitoring/resource.rs` to follow functional principles
--   Restructured `src/core/test_runner.rs` to use function composition
--   Updated `src/app.rs` to use a more functional approach
--   Refactored `src/lib.rs` to include functional programming utilities in the prelude
--   Modified `src/core/api_test_runner.rs` to use pure functions and avoid side effects
--   Updated `src/output/printer.rs` to return formatted strings instead of printing directly
--   Refactored `src/main.rs` to use function composition for the main application flow
-
-### Improved
-
--   Enhanced code modularity, testability, and maintainability through functional programming techniques
--   Reduced side effects across the codebase, making it easier to reason about and test
--   Improved error handling using functional patterns
-
-### Updated
-
--   README.md now includes information about the functional programming approach used in the project
-
+-   Updated the `parse_args` function in `src/main.rs`

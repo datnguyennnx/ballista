@@ -2,79 +2,106 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 use serde_json::Value;
+use std::fmt;
+use chrono;
 
-// Test Configurations
+pub mod api_test;
+pub mod load_test;
+pub mod stress_test;
+
+// Re-export types with unique names to avoid conflicts
+pub use api_test::ApiTestConfig;
+pub use load_test::LoadTestConfig;
+pub use stress_test::StressTestConfig;
+pub use crate::model::time_series::TimeSeriesPoint;
+// Correctly re-export ApiTest from its submodule
+pub use api_test::ApiTest; // Renamed from ApiTestRequest
+
+// Common types used across all test types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestConfig {
-    #[serde(default)]
-    pub urls: Vec<String>,
-    #[serde(default = "default_concurrency")]
-    pub concurrency: u32,
-    pub total_requests: Option<u32>,
-    pub duration: Option<u64>,
-}
-
-fn default_concurrency() -> u32 {
-    10
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoadTestConfig {
     pub target_url: String,
+    pub concurrent_users: u32,
+    pub duration_secs: u32,
     pub num_requests: u32,
-    pub concurrency: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StressTestConfig {
-    pub target_url: String,
-    pub duration_secs: u64,
-    pub concurrency: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiTestConfig {
-    pub target_url: String,
-    pub test_suite_path: String,
-}
-
-// Test Results and Updates
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestResult {
-    pub id: String,
-    pub test_type: TestType,
-    pub status: TestStatus,
-    pub metrics: Option<TestMetrics>,
-    pub error: Option<String>,
-    pub timestamp: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestMetrics {
-    pub requests_completed: u32,
-    pub total_requests: u32,
-    pub avg_response_time: f64,
-    pub min_response_time: Option<f64>,
-    pub max_response_time: Option<f64>,
-    pub median_response_time: Option<f64>,
-    pub p95_response_time: Option<f64>,
-    pub status_codes: HashMap<u16, u32>,
-    pub errors: u32,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TestType {
     Load,
     Stress,
     Api,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+impl fmt::Display for TestType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TestType::Load => write!(f, "Load"),
+            TestType::Stress => write!(f, "Stress"),
+            TestType::Api => write!(f, "Api"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TestStatus {
+    Pending,
     Started,
     Running,
     Completed,
     Error,
+}
+
+impl fmt::Display for TestStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TestStatus::Pending => write!(f, "Pending"),
+            TestStatus::Started => write!(f, "Started"),
+            TestStatus::Running => write!(f, "Running"),
+            TestStatus::Completed => write!(f, "Completed"),
+            TestStatus::Error => write!(f, "Error"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestMetrics {
+    pub requests_completed: u32,
+    pub total_requests: u32,
+    pub average_response_time: f64,
+    pub min_response_time: f64,
+    pub max_response_time: f64,
+    pub error_rate: f64,
+    pub requests_per_second: f64,
+    pub status_codes: HashMap<u16, u32>,
+}
+
+impl Default for TestMetrics {
+    fn default() -> Self {
+        TestMetrics {
+            requests_completed: 0,
+            total_requests: 0,
+            average_response_time: 0.0,
+            min_response_time: 0.0,
+            max_response_time: 0.0,
+            error_rate: 0.0,
+            requests_per_second: 0.0,
+            status_codes: HashMap::new(),
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestResult {
+    pub id: String,
+    pub test_type: TestType,
+    pub status: TestStatus,
+    pub progress: f32,
+    pub metrics: Option<TestMetrics>,
+    pub error: Option<String>,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,35 +112,34 @@ pub struct TestUpdate {
     pub progress: f32,
     pub metrics: Option<TestMetrics>,
     pub error: Option<String>,
-    pub timestamp: i64,
 }
 
-// API Test Specific Types
-#[derive(Debug, Clone, Deserialize)]
-pub struct ApiTest {
-    pub name: String,
-    pub url: String,
-    pub method: String,
-    pub headers: Option<HashMap<String, String>>,
-    pub body: Option<Value>,
-    pub expected_status: u16,
-    pub expected_body: Option<Value>,
-}
+// --- Result Structs ---
 
-// Request and Response Types
+// Result for Load/Stress tests
 #[derive(Debug, Clone)]
 pub struct RequestResult {
     pub duration: Duration,
     pub status: u16,
-    pub json: Option<Value>,
-    pub error: Option<String>,
 }
 
-// Pure functions for creating test entities
+// Result for API tests
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiRequestResult {
+    pub duration: Duration,
+    pub status: u16,
+    pub json: Option<Value>,
+}
+
+
+// --- Pure functions for creating test entities ---
+// (Kept for now, review later if needed)
+
 pub fn create_test_result(
     id: String,
     test_type: TestType,
     status: TestStatus,
+    progress: f32,
     metrics: Option<TestMetrics>,
     error: Option<String>,
 ) -> TestResult {
@@ -121,9 +147,11 @@ pub fn create_test_result(
         id,
         test_type,
         status,
+        progress,
         metrics,
         error,
-        timestamp: chrono::Utc::now().timestamp(),
+        start_time: chrono::Utc::now(),
+        end_time: None,
     }
 }
 
@@ -142,7 +170,6 @@ pub fn create_test_update(
         progress,
         metrics,
         error,
-        timestamp: chrono::Utc::now().timestamp(),
     }
 }
 
@@ -153,57 +180,65 @@ pub fn create_test_metrics(
     status_codes: HashMap<u16, u32>,
     errors: u32,
 ) -> TestMetrics {
-    let durations_ms: Vec<f64> = durations.iter()
-        .map(|d| d.as_secs_f64() * 1000.0)
-        .collect();
+    let total_duration_secs = durations.iter()
+        .map(|d| d.as_secs_f64())
+        .sum::<f64>();
 
-    let avg = if !durations_ms.is_empty() {
-        durations_ms.iter().sum::<f64>() / durations_ms.len() as f64
+    let avg_response_time_ms = if !durations.is_empty() {
+        (total_duration_secs * 1000.0) / durations.len() as f64
     } else {
         0.0
     };
 
-    let mut sorted_durations = durations_ms.clone();
-    sorted_durations.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let min_response_time_ms = durations.iter()
+        .map(|d| d.as_secs_f64() * 1000.0)
+        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap_or(0.0);
+
+    let max_response_time_ms = durations.iter()
+        .map(|d| d.as_secs_f64() * 1000.0)
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap_or(0.0);
+
+    let error_rate = if requests_completed > 0 {
+        (errors as f64 / requests_completed as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let requests_per_second = if total_duration_secs > 0.0 {
+        requests_completed as f64 / total_duration_secs
+    } else {
+        0.0
+    };
 
     TestMetrics {
         requests_completed,
         total_requests,
-        avg_response_time: avg,
-        min_response_time: sorted_durations.first().copied(),
-        max_response_time: sorted_durations.last().copied(),
-        median_response_time: get_percentile(&sorted_durations, 50.0),
-        p95_response_time: get_percentile(&sorted_durations, 95.0),
+        average_response_time: avg_response_time_ms,
+        min_response_time: min_response_time_ms,
+        max_response_time: max_response_time_ms,
+        error_rate,
+        requests_per_second,
         status_codes,
-        errors,
     }
 }
 
-fn get_percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
-    if sorted_values.is_empty() {
-        return None;
-    }
-    let index = ((sorted_values.len() as f64 * percentile / 100.0).round() as usize)
-        .saturating_sub(1)
-        .min(sorted_values.len() - 1);
-    Some(sorted_values[index])
-}
-
-// Helper functions for test configuration
+// Helper functions for test configuration conversion
 pub fn create_test_config_from_load(config: &LoadTestConfig) -> TestConfig {
     TestConfig {
-        urls: vec![config.target_url.clone()],
-        concurrency: config.concurrency,
-        total_requests: Some(config.num_requests),
-        duration: None,
+        target_url: config.target_url.clone(),
+        concurrent_users: config.concurrent_users.unwrap_or(1),
+        duration_secs: 0,
+        num_requests: config.num_requests,
     }
 }
 
 pub fn create_test_config_from_stress(config: &StressTestConfig) -> TestConfig {
     TestConfig {
-        urls: vec![config.target_url.clone()],
-        concurrency: config.concurrency,
-        total_requests: None,
-        duration: Some(config.duration_secs),
+        target_url: config.target_url.clone(),
+        concurrent_users: config.concurrent_users,
+        duration_secs: config.duration_secs,
+        num_requests: 0,
     }
-} 
+}
